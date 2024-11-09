@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"regexp"
 
@@ -28,20 +29,27 @@ func CreateUserTable(db *sql.DB) {
 func AddUser(db *sql.DB, username, email, password string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		log.Printf("Error hashing password: %v", err)
+		return fmt.Errorf("could not hash password: %w", err)
 	}
 
 	stmt, err := db.Prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)")
 	if err != nil {
-		return err
+		log.Printf("Error preparing statement: %v", err)
+		return fmt.Errorf("could not prepare statement: %w", err)
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(username, email, hashedPassword)
 	if err != nil {
-		return err
+		if isUniqueConstraintError(err) {
+			return errors.New("username or email already exists")
+		}
+		log.Printf("Error executing statement: %v", err)
+		return fmt.Errorf("could not execute statement: %w", err)
 	}
 
+	log.Println("User added successfully:", username)
 	return nil
 }
 
@@ -124,4 +132,8 @@ func ChangeUsername(db *sql.DB, username, newUsername string) error {
 	}
 
 	return nil
+}
+
+func isUniqueConstraintError(err error) bool {
+	return err != nil && (err.Error() == "UNIQUE constraint failed: users.username" || err.Error() == "UNIQUE constraint failed: users.email")
 }

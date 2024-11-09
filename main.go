@@ -19,4 +19,10 @@ func main() {
 	database.CreateUserTable(db)
 	database.CreateMessageTable(db)
 	database.CreateTopicTable(db)
+
+	database.AddUser(db, "dDogge", "blabla1@email.com", "oijeoidfwiuo")
+	database.AddUser(db, "Imbus", "blabla2@email.com", "odegrfwegeriuo")
+	database.ChangePassword(db, "Imbus", "odegrfwegeriuo", "yoyoyo")
+	database.ChangeUsername(db, "Imbus", "Imbus64")
+	database.ChangeEmail(db, "Imbus64", "dwasdw@email.com")
 }
