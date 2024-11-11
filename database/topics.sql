@@ -3,6 +3,6 @@ CREATE TABLE IF NOT EXISTS topics (
     title TEXT UNIQUE NOT NULL,
     messages INTEGER DEFAULT 0,
     creation_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    creator_id INTEGER NOT NULL,
+    creator_id INTEGER,
     FOREIGN KEY (creator) REFERENCES users(id)
 );

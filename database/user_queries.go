@@ -134,6 +134,47 @@ func ChangeUsername(db *sql.DB, username, newUsername string) error {
 	return nil
 }
 
+func RemoveUser(db *sql.DB, username string) error {
+	var userID int
+	err := db.QueryRow("SELECT id FROM users WHERE username = ?", username).Scan(&userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("User not found: %s", username)
+			return fmt.Errorf("User not found: %s", username)
+		}
+		log.Printf("Error fetching user ID: %v", err)
+		return fmt.Errorf("Could not fetch user ID: %w", err)
+	}
+
+	_, err = db.Exec("UPDATE topics SET user_id = NULL WHERE user_id = ?", userID)
+	if err != nil {
+		log.Printf("Error setting user_id to NULL in topics: %v", err)
+		return fmt.Errorf("Could not set user_id to NULL in topics: %w", err)
+	}
+
+	_, err = db.Exec("UPDATE messages SET user_id = NULL WHERE user_id = ?", userID)
+	if err != nil {
+		log.Printf("Error setting user_id to NULL in messages: %v", err)
+		return fmt.Errorf("Could not set user_id to NULL in messages: %w", err)
+	}
+
+	stmt, err := db.Prepare("DELETE FROM users WHERE username = ?")
+	if err != nil {
+		log.Printf("Error preparing statement: %v", err)
+		return fmt.Errorf("Could not prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(username)
+	if err != nil {
+		log.Printf("Error executing statement: %v", err)
+		return fmt.Errorf("Could not execute statement: %w", err)
+	}
+
+	log.Println("User removed successfully:", username)
+	return nil
+}
+
 func isUniqueConstraintError(err error) bool {
 	return err != nil && (err.Error() == "UNIQUE constraint failed: users.username" || err.Error() == "UNIQUE constraint failed: users.email")
 }
