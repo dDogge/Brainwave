@@ -12,8 +12,9 @@ func CreateTopicTable(db *sql.DB) {
     			id INTEGER PRIMARY KEY AUTOINCREMENT,
     			title TEXT UNIQUE NOT NULL,
     			messages INTEGER DEFAULT 0,
+				upvotes INTEGER DEFAULT 0,
     			creation_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    			creator_id INTEGER NOT NULL,
+    			creator_id INTEGER,
     			FOREIGN KEY (creator_id) REFERENCES users(id)
 			);`
 	_, err := db.Exec(query)
@@ -23,16 +24,14 @@ func CreateTopicTable(db *sql.DB) {
 }
 
 func AddTopic(db *sql.DB, title, username string) error {
-	var creator_id int
-	err := db.QueryRow("SELECT id FROM users WHERE username = ?", username).Scan(&creator_id)
+	var creatorID int
+	err := db.QueryRow("SELECT id FROM users WHERE username = ?", username).Scan(&creatorID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errors.New("User not found")
-		} else {
-			log.Fatal(err)
+			return errors.New("user not found")
 		}
 		log.Printf("Error fetching creator_id: %v", err)
-		return fmt.Errorf("Could not fetch creator_id: %w", err)
+		return fmt.Errorf("could not fetch creator_id: %w", err)
 	}
 
 	stmt, err := db.Prepare("INSERT INTO topics (title, creator_id) VALUES (?, ?)")
@@ -42,13 +41,19 @@ func AddTopic(db *sql.DB, title, username string) error {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(title, creator_id)
+	_, err = stmt.Exec(title, creatorID)
 	if err != nil {
 		if isUniqueConstraintError(err) {
 			return errors.New("Topic tilte already exists")
 		}
 		log.Printf("Error executing statement: %v", err)
 		return fmt.Errorf("Could not execute statement: %w", err)
+	}
+
+	_, err = db.Exec("UPDATE users SET topics_opened = topics_opened + 1 WHERE id = ?", creatorID)
+	if err != nil {
+		log.Printf("Error incrementing topics_opened for user ID %d: %v", creatorID, err)
+		return fmt.Errorf("Could not increment topics_opened: %w", err)
 	}
 
 	log.Println("Topic added successfully:", title)
@@ -72,14 +77,50 @@ func RemoveTopic(db *sql.DB, title string) error {
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
 		log.Printf("Error retrieving rows affected: %v", err)
-		return fmt.Errorf("could not retrieve rows affected: %w", err)
+		return fmt.Errorf("Could not retrieve rows affected: %w", err)
 	}
 
 	if rowsAffected == 0 {
 		log.Printf("No topic found with title: %s", title)
-		return fmt.Errorf("no topic found with title: %s", title)
+		return fmt.Errorf("No topic found with title: %s", title)
 	}
 
 	log.Println("Topic removed successfully:", title)
+	return nil
+}
+
+func UpVoteTopic(db *sql.DB, title, username string) error {
+	stmt, err := db.Prepare("UPDATE topics SET upvotes = upvotes + 1 WHERE title = ?")
+	if err != nil {
+		log.Printf("Error preparing statement: %v", err)
+		return fmt.Errorf("Could not prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(title)
+	if err != nil {
+		log.Printf("Error executing statement: %v", err)
+		return fmt.Errorf("Could not execute statement: %w", err)
+	}
+
+	log.Println("Upvote added successfully for topic:", title)
+	return nil
+}
+
+func DownVoteTopic(db *sql.DB, title, username string) error {
+	stmt, err := db.Prepare("UPDATE topics SET upvotes = upvotes - 1 WHERE title = ?")
+	if err != nil {
+		log.Printf("Error preparing statement: %v", err)
+		return fmt.Errorf("Could not prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(title)
+	if err != nil {
+		log.Printf("Error executing statement: %v", err)
+		return fmt.Errorf("Could not execute statement: %w", err)
+	}
+
+	log.Println("Downvote added successfully for topic:", title)
 	return nil
 }

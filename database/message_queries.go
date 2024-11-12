@@ -11,12 +11,13 @@ func CreateMessageTable(db *sql.DB) {
     			title TEXT,
     			message TEXT,
     			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    			user_id INTEGER NOT NULL,
+				likes INTEGER DEFUALT 0,
+    			user_id INTEGER,
     			parent_id INTEGER DEFAULT NULL,
     			topic_id INTEGER NOT NULL,
     			FOREIGN KEY (user_id) REFERENCES users(id),
     			FOREIGN KEY (parent_id) REFERENCES messages(id),
-    			FOREIGN KEY (topic_id) REFERENCES topics(id)
+    			FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
 			);`
 	_, err := db.Exec(query)
 	if err != nil {

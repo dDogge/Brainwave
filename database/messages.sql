@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS messages (
     title TEXT,
     message TEXT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    likes INTEGER DEFUALT 0,
     user_id INTEGER,
     parent_id INTEGER DEFAULT NULL,
     topic_id INTEGER NOT NULL,
