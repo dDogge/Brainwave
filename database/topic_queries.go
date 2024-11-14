@@ -28,7 +28,7 @@ func AddTopic(db *sql.DB, title, username string) error {
 	err := db.QueryRow("SELECT id FROM users WHERE username = ?", username).Scan(&creatorID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return errors.New("user not found")
+			return errors.New("User not found")
 		}
 		log.Printf("Error fetching creator_id: %v", err)
 		return fmt.Errorf("could not fetch creator_id: %w", err)
@@ -44,7 +44,7 @@ func AddTopic(db *sql.DB, title, username string) error {
 	_, err = stmt.Exec(title, creatorID)
 	if err != nil {
 		if isUniqueConstraintError(err) {
-			return errors.New("Topic tilte already exists")
+			return errors.New("Topic title already exists")
 		}
 		log.Printf("Error executing statement: %v", err)
 		return fmt.Errorf("Could not execute statement: %w", err)
