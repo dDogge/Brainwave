@@ -22,20 +22,20 @@ func CreateUserTable(db *sql.DB) {
 			);`
 	_, err := db.Exec(query)
 	if err != nil {
-		log.Fatal("Error creating user table: ", err)
+		log.Fatal("error creating user table: ", err)
 	}
 }
 
 func AddUser(db *sql.DB, username, email, password string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("Error hashing password: %v", err)
+		log.Printf("error hashing password: %v", err)
 		return fmt.Errorf("could not hash password: %w", err)
 	}
 
 	stmt, err := db.Prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)")
 	if err != nil {
-		log.Printf("Error preparing statement: %v", err)
+		log.Printf("error preparing statement: %v", err)
 		return fmt.Errorf("could not prepare statement: %w", err)
 	}
 	defer stmt.Close()
@@ -45,11 +45,11 @@ func AddUser(db *sql.DB, username, email, password string) error {
 		if isUniqueConstraintError(err) {
 			return errors.New("username or email already exists")
 		}
-		log.Printf("Error executing statement: %v", err)
+		log.Printf("error executing statement: %v", err)
 		return fmt.Errorf("could not execute statement: %w", err)
 	}
 
-	log.Println("User added successfully:", username)
+	log.Println("user added successfully:", username)
 	return nil
 }
 
@@ -139,39 +139,39 @@ func RemoveUser(db *sql.DB, username string) error {
 	err := db.QueryRow("SELECT id FROM users WHERE username = ?", username).Scan(&userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			log.Printf("User not found: %s", username)
-			return fmt.Errorf("User not found: %s", username)
+			log.Printf("user not found: %s", username)
+			return fmt.Errorf("user not found: %s", username)
 		}
-		log.Printf("Error fetching user ID: %v", err)
-		return fmt.Errorf("Could not fetch user ID: %w", err)
+		log.Printf("error fetching user ID: %v", err)
+		return fmt.Errorf("could not fetch user ID: %w", err)
 	}
 
 	_, err = db.Exec("UPDATE topics SET user_id = NULL WHERE user_id = ?", userID)
 	if err != nil {
-		log.Printf("Error setting user_id to NULL in topics: %v", err)
-		return fmt.Errorf("Could not set user_id to NULL in topics: %w", err)
+		log.Printf("error setting user_id to NULL in topics: %v", err)
+		return fmt.Errorf("could not set user_id to NULL in topics: %w", err)
 	}
 
 	_, err = db.Exec("UPDATE messages SET user_id = NULL WHERE user_id = ?", userID)
 	if err != nil {
-		log.Printf("Error setting user_id to NULL in messages: %v", err)
-		return fmt.Errorf("Could not set user_id to NULL in messages: %w", err)
+		log.Printf("error setting user_id to NULL in messages: %v", err)
+		return fmt.Errorf("could not set user_id to NULL in messages: %w", err)
 	}
 
 	stmt, err := db.Prepare("DELETE FROM users WHERE username = ?")
 	if err != nil {
-		log.Printf("Error preparing statement: %v", err)
-		return fmt.Errorf("Could not prepare statement: %w", err)
+		log.Printf("error preparing statement: %v", err)
+		return fmt.Errorf("could not prepare statement: %w", err)
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(username)
 	if err != nil {
-		log.Printf("Error executing statement: %v", err)
-		return fmt.Errorf("Could not execute statement: %w", err)
+		log.Printf("error executing statement: %v", err)
+		return fmt.Errorf("could not execute statement: %w", err)
 	}
 
-	log.Println("User removed successfully:", username)
+	log.Println("user removed successfully:", username)
 	return nil
 }
 
