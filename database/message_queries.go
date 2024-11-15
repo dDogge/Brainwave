@@ -76,3 +76,38 @@ func AddMessage(db *sql.DB, topic, message, username string) error {
 	log.Println("message added successfully:", message)
 	return nil
 }
+
+func SetParent(db *sql.DB, parentID, childID int) error {
+	var parentTopicID, childTopicID int
+
+	err := db.QueryRow("SELECT topic_id FROM messages WHERE id = ?", parentID).Scan(&parentTopicID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("parent message with ID %d not found", parentID)
+		}
+		log.Printf("error fetching topic_id for parentID %d: %v", parentID, err)
+		return fmt.Errorf("could not fetch topic_id for parent message: %w", err)
+	}
+
+	err = db.QueryRow("SELECT topic_id FROM messages WHERE id = ?", childID).Scan(&childTopicID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("child message with ID %d not found", childID)
+		}
+		log.Printf("error fetching topic_id for childID %d: %v", childID, err)
+		return fmt.Errorf("could not fetch topic_id for child message: %w", err)
+	}
+
+	if parentTopicID != childTopicID {
+		return fmt.Errorf("messages are not in the same topic: parentID=%d, childID=%d", parentID, childID)
+	}
+
+	_, err = db.Exec("UPDATE messages SET parent_id = ? WHERE id = ?", parentID, childID)
+	if err != nil {
+		log.Printf("error setting parent_id for user ID %d: %v", childID, err)
+		return fmt.Errorf("could not set parent_id: %w", err)
+	}
+
+	log.Printf("Parent for message set successfully: parentID=%d, childID=%d", parentID, childID)
+	return nil
+}
