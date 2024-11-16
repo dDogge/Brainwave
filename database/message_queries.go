@@ -111,3 +111,46 @@ func SetParent(db *sql.DB, parentID, childID int) error {
 	log.Printf("Parent for message set successfully: parentID=%d, childID=%d", parentID, childID)
 	return nil
 }
+
+func GetMessafesByTopic(db *sql.DB, topicID int) ([]map[string]interface{}, error) {
+	rows, err := db.Query("SELECT id, message, timestamp, likes, user_id, parent_id FROM messages WHERE topic_id = ?", topicID)
+	if err != nil {
+		log.Printf("error fetching messages for topic ID %d: %v", topicID, err)
+		return nil, fmt.Errorf("could not fetch messages: %w", err)
+	}
+	defer rows.Close()
+
+	var messages []map[string]interface{}
+	for rows.Next() {
+		var id, likes, userID, parentID sql.NullInt64
+		var message, timestamp string
+
+		if err := rows.Scan(&id, &message, &timestamp, &likes, &userID, &parentID); err != nil {
+			log.Printf("error scanning message row: %v", err)
+			return nil, fmt.Errorf("could not scan message row: %w", err)
+		}
+
+		msg := map[string]interface{}{
+			"id":        id.Int64,
+			"message":   message,
+			"timestamp": timestamp,
+			"likes":     likes.Int64,
+			"user_id":   userID.Int64,
+			"parent_id": parentID.Int64,
+		}
+		messages = append(messages, msg)
+	}
+
+	return messages, nil
+}
+
+func LikeMessage(db *sql.DB, messageID int) error {
+	_, err := db.Exec("UPDATE messages SET likes = likes + 1 WHERE id = ?", messageID)
+	if err != nil {
+		log.Printf("error incrementing likes for message ID %d: %v", messageID, err)
+		return fmt.Errorf("could not increment likes: %w", err)
+	}
+
+	log.Printf("likes incremented successfully for message ID %d", messageID)
+	return nil
+}
