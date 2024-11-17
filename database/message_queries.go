@@ -154,3 +154,14 @@ func LikeMessage(db *sql.DB, messageID int) error {
 	log.Printf("likes incremented successfully for message ID %d", messageID)
 	return nil
 }
+
+func DislikeMessage(db *sql.DB, messageID int) error {
+	_, err := db.Exec("UPDATE messages SET likes = likes - 1 WHERE id = ?", messageID)
+	if err != nil {
+		log.Printf("error decrementing likes for message ID %d: %v", messageID, err)
+		return fmt.Errorf("could not decrement likes: %w", err)
+	}
+
+	log.Printf("likes decremented successfully for message ID %d", messageID)
+	return nil
+}
