@@ -112,7 +112,7 @@ func SetParent(db *sql.DB, parentID, childID int) error {
 	return nil
 }
 
-func GetMessafesByTopic(db *sql.DB, topicID int) ([]map[string]interface{}, error) {
+func GetMessagesByTopic(db *sql.DB, topicID int) ([]map[string]interface{}, error) {
 	rows, err := db.Query("SELECT id, message, timestamp, likes, user_id, parent_id FROM messages WHERE topic_id = ?", topicID)
 	if err != nil {
 		log.Printf("error fetching messages for topic ID %d: %v", topicID, err)

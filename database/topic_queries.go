@@ -124,3 +124,61 @@ func DownVoteTopic(db *sql.DB, title, username string) error {
 	log.Println("downvote added successfully for topic:", title)
 	return nil
 }
+
+func GetAllTopics(db *sql.DB) ([]map[string]interface{}, error) {
+	rows, err := db.Query("SELECT id, title, messages, upvotes, creation_date, creator_id FROM topics")
+	if err != nil {
+		log.Printf("error fetching topics: %v", err)
+		return nil, fmt.Errorf("could not fetch topics: %w", err)
+	}
+	defer rows.Close()
+
+	var topics []map[string]interface{}
+	for rows.Next() {
+		var id, messages, upvotes, creatorID sql.NullInt64
+		var title, creationDate string
+
+		if err := rows.Scan(&id, &title, &messages, &upvotes, &creationDate, &creatorID); err != nil {
+			log.Printf("error scanning topic row: %v", err)
+			return nil, fmt.Errorf("could not scan topic row: %w", err)
+		}
+
+		topic := map[string]interface{}{
+			"id":            id.Int64,
+			"title":         title,
+			"messages":      messages.Int64,
+			"upvotes":       upvotes.Int64,
+			"creation_date": creationDate,
+			"creator_id":    creatorID.Int64,
+		}
+		topics = append(topics, topic)
+	}
+
+	return topics, nil
+}
+
+func GetTopicByTitle(db *sql.DB, title string) (map[string]interface{}, error) {
+	var id, messages, upvotes, creatorID sql.NullInt64
+	var creationDate string
+
+	err := db.QueryRow("SELECT id, messages, upvotes, creation_date, creator_id FROM topics WHERE title = ?", title).
+		Scan(&id, &messages, &upvotes, &creationDate, &creatorID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("topic with title '%s' not found", title)
+		}
+		log.Printf("error fetching topic by title '%s': %v", title, err)
+		return nil, fmt.Errorf("could not fetch topic: %w", err)
+	}
+
+	topic := map[string]interface{}{
+		"id":            id.Int64,
+		"title":         title,
+		"messages":      messages.Int64,
+		"upvotes":       upvotes.Int64,
+		"creation_date": creationDate,
+		"creator_id":    creatorID.Int64,
+	}
+
+	return topic, nil
+}
