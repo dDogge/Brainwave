@@ -182,3 +182,14 @@ func GetTopicByTitle(db *sql.DB, title string) (map[string]interface{}, error) {
 
 	return topic, nil
 }
+
+func CountTopics(db *sql.DB) (int, error) {
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM topics").Scan(&count)
+	if err != nil {
+		log.Printf("error counting topics: %v", err)
+		return 0, fmt.Errorf("could not count topics: %w", err)
+	}
+
+	return count, nil
+}
