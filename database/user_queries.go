@@ -43,6 +43,7 @@ func AddUser(db *sql.DB, username, email, password string) error {
 	_, err = stmt.Exec(username, email, hashedPassword)
 	if err != nil {
 		if isUniqueConstraintError(err) {
+			log.Printf("unique constraint violation for username or email: %v", err)
 			return errors.New("username or email already exists")
 		}
 		log.Printf("error executing statement: %v", err)
@@ -58,13 +59,16 @@ func CheckPassword(db *sql.DB, username, password string) (bool, error) {
 	err := db.QueryRow("SELECT password FROM users WHERE username = ?", username).Scan(&hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			log.Printf("user not found: %s", username)
 			return false, nil
 		}
-		return false, err
+		log.Printf("error fetching password for username %s: %v", username, err)
+		return false, fmt.Errorf("could not fetch password: %w", err)
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	if err != nil {
+		log.Printf("incorrect password for user %s: %v", username, err)
 		return false, nil
 	}
 
@@ -76,26 +80,32 @@ func ChangePassword(db *sql.DB, username, currentPassword, newPassword string) e
 	err := db.QueryRow("SELECT password FROM users WHERE username = ?", username).Scan(&hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			log.Printf("user not found: %s", username)
 			return errors.New("user not found")
 		}
-		return err
+		log.Printf("error fetching password for user %s: %v", username, err)
+		return fmt.Errorf("could not fetch password: %w", err)
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(currentPassword))
 	if err != nil {
+		log.Printf("incorrect current password for user %s: %v", username, err)
 		return errors.New("incorrect current password")
 	}
 
 	hashedNewPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		log.Printf("error hashing new password: %v", err)
+		return fmt.Errorf("could not hash new password: %w", err)
 	}
 
 	_, err = db.Exec("UPDATE users SET password = ? WHERE username = ?", hashedNewPassword, username)
 	if err != nil {
-		return err
+		log.Printf("error updating password for user %s: %v", username, err)
+		return fmt.Errorf("could not update password: %w", err)
 	}
 
+	log.Println("password changed successfully for user:", username)
 	return nil
 }
 
@@ -103,14 +113,22 @@ func ChangeEmail(db *sql.DB, username, newEmail string) error {
 	var existingUser string
 	err := db.QueryRow("SELECT username FROM users WHERE email = ?", newEmail).Scan(&existingUser)
 	if err != sql.ErrNoRows {
+		log.Printf("error checking for existing email %s: %v", newEmail, err)
+		return fmt.Errorf("could not check for existing email: %w", err)
+	}
+
+	if err == nil {
+		log.Printf("email already in use: %s", newEmail)
 		return errors.New("email is already in use")
 	}
 
 	_, err = db.Exec("UPDATE users SET email = ? WHERE username = ?", newEmail, username)
 	if err != nil {
-		return err
+		log.Printf("error updating email for user %s: %v", username, err)
+		return fmt.Errorf("could not update email: %w", err)
 	}
 
+	log.Println("email updated successfully for user:", username)
 	return nil
 }
 
@@ -118,19 +136,28 @@ func ChangeUsername(db *sql.DB, username, newUsername string) error {
 	var existingUser string
 	err := db.QueryRow("SELECT username FROM users WHERE username = ?", newUsername).Scan(&existingUser)
 	if err != sql.ErrNoRows {
+		log.Printf("error checking for existing username %s: %v", newUsername, err)
+		return fmt.Errorf("could not check for existing username: %w", err)
+	}
+
+	if err == nil {
+		log.Printf("username already in use: %s", newUsername)
 		return errors.New("username is already in use")
 	}
 
 	validUsername := regexp.MustCompile(`^[a-zA-Z0-9_]{3,20}$`)
 	if !validUsername.MatchString(newUsername) {
-		return errors.New("username does not meet requirement")
+		log.Printf("invalid username format: %s", newUsername)
+		return errors.New("username does not meet requirements")
 	}
 
 	_, err = db.Exec("UPDATE users SET username = ? WHERE username = ?", newUsername, username)
 	if err != nil {
-		return err
+		log.Printf("error updating username for user %s: %v", username, err)
+		return fmt.Errorf("could not update username: %w", err)
 	}
 
+	log.Println("username updated successfully from", username, "to", newUsername)
 	return nil
 }
 
