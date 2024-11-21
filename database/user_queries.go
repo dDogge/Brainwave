@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand/v2"
 	"regexp"
+	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -16,6 +18,7 @@ func CreateUserTable(db *sql.DB) {
     			username TEXT UNIQUE NOT NULL,
     			password TEXT NOT NULL,
 				email TEXT NOT NULL,
+				reset_code TEXT DEFAULT NULL,
     			topics_opened INTEGER DEFAULT 0,
     			messages_sent INTEGER DEFAULT 0,
     			creation_date DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -204,4 +207,58 @@ func RemoveUser(db *sql.DB, username string) error {
 
 func isUniqueConstraintError(err error) bool {
 	return err != nil && (err.Error() == "UNIQUE constraint failed: users.username" || err.Error() == "UNIQUE constraint failed: users.email")
+}
+
+func GeneratePasswordResetCode(db *sql.DB, email string) (string, error) {
+	var userID int
+	err := db.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", errors.New("email not found")
+		}
+		log.Printf("error fetching user ID for email %s: %v", email, err)
+		return "", fmt.Errorf("could not fetch user ID: %w", err)
+	}
+
+	var code int = rand.IntN(1000000)
+	var resetCode string = strconv.Itoa(code)
+	_, err = db.Exec("UPDATE users SET reset_code = ? WHERE id = ?", resetCode, userID)
+	if err != nil {
+		log.Printf("error creating password reset code for user ID %d: %v", userID, err)
+		return "", fmt.Errorf("could not create password reset code: %w", err)
+	}
+
+	return resetCode, nil
+}
+
+func ResetPassword(db *sql.DB, email, resetCode, newPassword string) error {
+	var userID int
+	err := db.QueryRow("SELECT id from users WHERE reset_code = ?", resetCode).Scan(&userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.New("invalid reset code")
+		}
+		log.Printf("error fetching user ID for reset code %s: %v", resetCode, err)
+		return fmt.Errorf("could not fetch user ID: %w", err)
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("error hashing new password: %v", err)
+		return fmt.Errorf("could not hash new password: %w", err)
+	}
+
+	_, err = db.Exec("UPDATE users SET password = ? WHERE id = ?", hashedPassword, userID)
+	if err != nil {
+		log.Printf("error updating password for user ID %d: %v", userID, err)
+		return fmt.Errorf("could not update password: %w", err)
+	}
+
+	_, err = db.Exec("UPDATE users SET reset_code = NULL WHERE id = ?", userID)
+	if err != nil {
+		log.Printf("error deleting password reset code for user ID %d: %v", userID, err)
+		return fmt.Errorf("could not delete password reset code: %w", err)
+	}
+
+	return nil
 }

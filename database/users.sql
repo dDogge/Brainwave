@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     email TEXT NOT NULL,
+    reset_code TEXT DEFAULT NULL,
     topics_opened INTEGER DEFAULT 0,
     messages_sent INTEGER DEFAULT 0,
     creation_date DATETIME DEFAULT CURRENT_TIMESTAMP
