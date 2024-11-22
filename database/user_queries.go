@@ -262,3 +262,35 @@ func ResetPassword(db *sql.DB, email, resetCode, newPassword string) error {
 
 	return nil
 }
+
+func GetAllUsers(db *sql.DB) ([]map[string]interface{}, error) {
+	rows, err := db.Query("SELECT id, username, email, topics_opened, messages_sent, creation_date FROM users")
+	if err != nil {
+		log.Printf("error fetching all users: %v", err)
+		return nil, fmt.Errorf("could not fetch users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []map[string]interface{}
+	for rows.Next() {
+		var id, topicsOpened, messagesSent sql.NullInt64
+		var username, email, creationDate string
+
+		if err := rows.Scan(&id, &username, &email, &topicsOpened, &messagesSent, &creationDate); err != nil {
+			log.Printf("error scanning user row: %v", err)
+			return nil, fmt.Errorf("could not scan user row: %w", err)
+		}
+
+		user := map[string]interface{}{
+			"id":            id.Int64,
+			"username":      username,
+			"email":         email,
+			"topics_opened": topicsOpened.Int64,
+			"messages_sent": messagesSent.Int64,
+			"creation_date": creationDate,
+		}
+		users = append(users, user)
+	}
+
+	return users, nil
+}
