@@ -12,7 +12,7 @@ func CreateMessageTable(db *sql.DB) {
     			id INTEGER PRIMARY KEY AUTOINCREMENT,
     			message TEXT,
     			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-				likes INTEGER DEFUALT 0,
+				likes INTEGER DEFAULT 0,
     			user_id INTEGER,
     			parent_id INTEGER DEFAULT NULL,
     			topic_id INTEGER NOT NULL,
