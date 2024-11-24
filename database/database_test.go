@@ -14,12 +14,12 @@ var testDB *sql.DB
 func TestMain(m *testing.M) {
 	var err error
 
-	testDB, err = sql.Open("sqlite3", ":memory:")
+	testDB, err = sql.Open("sqlite", ":memory:")
 	if err != nil {
 		log.Fatalf("failed to open in-memory database: %v", err)
 	}
 
-	err = setupTables(testDB)
+	err = SetupTables(testDB)
 	if err != nil {
 		log.Fatalf("failed to setup tables: %v", err)
 	}
@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func setupTables(db *sql.DB) error {
+func SetupTables(db *sql.DB) error {
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS users (
     		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,4 +72,25 @@ func setupTables(db *sql.DB) error {
 		}
 	}
 	return nil
+}
+
+func TestAddUser(t *testing.T) {
+	username := "testuser"
+	email := "test@mail.com"
+	password := "password"
+
+	err := AddUser(testDB, username, email, password)
+	if err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	var storedUsername string
+	err = testDB.QueryRow("SELECT username FROM users WHERE username = ?", username).Scan(&storedUsername)
+	if err != nil {
+		t.Fatalf("Failed to fetch user: %v", err)
+	}
+
+	if storedUsername != username {
+		t.Errorf("Expected username %s, got %s", username, storedUsername)
+	}
 }
