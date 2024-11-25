@@ -74,6 +74,43 @@ func SetupTables(db *sql.DB) error {
 	return nil
 }
 
+func PrintTableContents(db *sql.DB, tableName string) {
+	query := "SELECT * FROM " + tableName
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Printf("Error querying table %s: %v", tableName, err)
+		return
+	}
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		log.Printf("Error fetching columns for table %s: %v", tableName, err)
+		return
+	}
+
+	values := make([]interface{}, len(columns))
+	valuePtrs := make([]interface{}, len(columns))
+	for i := range values {
+		valuePtrs[i] = &values[i]
+	}
+
+	log.Printf("Contents of table %s:", tableName)
+	for rows.Next() {
+		err := rows.Scan(valuePtrs...)
+		if err != nil {
+			log.Printf("Error scanning row: %v", err)
+			return
+		}
+
+		rowData := make(map[string]interface{})
+		for i, col := range columns {
+			rowData[col] = values[i]
+		}
+		log.Println(rowData)
+	}
+}
+
 func TestAddUser(t *testing.T) {
 	username := "testuser"
 	email := "test@mail.com"
@@ -83,6 +120,8 @@ func TestAddUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AddUser failed: %v", err)
 	}
+
+	PrintTableContents(testDB, "users")
 
 	var storedUsername string
 	err = testDB.QueryRow("SELECT username FROM users WHERE username = ?", username).Scan(&storedUsername)
