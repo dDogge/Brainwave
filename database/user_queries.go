@@ -176,10 +176,10 @@ func RemoveUser(db *sql.DB, username string) error {
 		return fmt.Errorf("could not fetch user ID: %w", err)
 	}
 
-	_, err = db.Exec("UPDATE topics SET user_id = NULL WHERE user_id = ?", userID)
+	_, err = db.Exec("UPDATE topics SET creator_id = NULL WHERE creator_id = ?", userID)
 	if err != nil {
-		log.Printf("error setting user_id to NULL in topics: %v", err)
-		return fmt.Errorf("could not set user_id to NULL in topics: %w", err)
+		log.Printf("error setting creator_id to NULL in topics: %v", err)
+		return fmt.Errorf("could not set creator_id to NULL in topics: %w", err)
 	}
 
 	_, err = db.Exec("UPDATE messages SET user_id = NULL WHERE user_id = ?", userID)
