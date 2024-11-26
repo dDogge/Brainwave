@@ -78,14 +78,14 @@ func PrintTableContents(db *sql.DB, tableName string) {
 	query := "SELECT * FROM " + tableName
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Printf("Error querying table %s: %v", tableName, err)
+		log.Printf("error querying table %s: %v", tableName, err)
 		return
 	}
 	defer rows.Close()
 
 	columns, err := rows.Columns()
 	if err != nil {
-		log.Printf("Error fetching columns for table %s: %v", tableName, err)
+		log.Printf("error fetching columns for table %s: %v", tableName, err)
 		return
 	}
 
@@ -95,11 +95,11 @@ func PrintTableContents(db *sql.DB, tableName string) {
 		valuePtrs[i] = &values[i]
 	}
 
-	log.Printf("Contents of table %s:", tableName)
+	log.Printf("contents of table %s:", tableName)
 	for rows.Next() {
 		err := rows.Scan(valuePtrs...)
 		if err != nil {
-			log.Printf("Error scanning row: %v", err)
+			log.Printf("error scanning row: %v", err)
 			return
 		}
 
@@ -126,10 +126,53 @@ func TestAddUser(t *testing.T) {
 	var storedUsername string
 	err = testDB.QueryRow("SELECT username FROM users WHERE username = ?", username).Scan(&storedUsername)
 	if err != nil {
-		t.Fatalf("Failed to fetch user: %v", err)
+		t.Fatalf("failed to fetch user: %v", err)
 	}
 
 	if storedUsername != username {
-		t.Errorf("Expected username %s, got %s", username, storedUsername)
+		t.Errorf("expected username %s, got %s", username, storedUsername)
+	}
+}
+
+func TestRemoveUser(t *testing.T) {
+	username := "removalUser"
+	email := "removal@mail.com"
+	password := "removal"
+
+	err := AddUser(testDB, username, email, password)
+	if err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "users")
+
+	var storedUsername string
+	err = testDB.QueryRow("SELECT username FROM users WHERE username = ?", username).Scan(&storedUsername)
+	if err != nil {
+		t.Fatalf("failed to fetch user: %v", err)
+	}
+
+	if storedUsername != username {
+		t.Errorf("expected username %s, got %s", username, storedUsername)
+	}
+
+	err = RemoveUser(testDB, username)
+	if err != nil {
+		t.Fatalf("RemoveUser failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "users")
+
+	var checkUsername string
+	err = testDB.QueryRow("SELECT username FROM users WHERE username = ?", username).Scan(&checkUsername)
+	if err == nil {
+		t.Errorf("expected user %s to be removed, but it still exists", username)
+	} else if err != sql.ErrNoRows {
+		t.Fatalf("unexpected error while checking for removed user: %v", err)
+	}
+
+	err = RemoveUser(testDB, "nonexistentUser")
+	if err == nil {
+		t.Error("Expected RemoveUser to fail for nonexistent user, but it succeeded")
 	}
 }
