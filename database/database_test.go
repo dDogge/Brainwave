@@ -217,10 +217,14 @@ func TestChangePassword(t *testing.T) {
 		t.Fatalf("AddUser failed: %v", err)
 	}
 
+	PrintTableContents(testDB, "users")
+
 	err = ChangePassword(testDB, username, password, newPassword)
 	if err != nil {
 		t.Fatalf("ChangePassword failed: %v", err)
 	}
+
+	PrintTableContents(testDB, "users")
 
 	valid, err := CheckPassword(testDB, username, newPassword)
 	if err != nil {
@@ -252,10 +256,14 @@ func TestChangeEmail(t *testing.T) {
 		t.Fatalf("AddUser failed: %v", err)
 	}
 
+	PrintTableContents(testDB, "users")
+
 	err = ChangeEmail(testDB, username, newEmail)
 	if err != nil {
 		t.Fatalf("ChangeEmail failed: %v", err)
 	}
+
+	PrintTableContents(testDB, "users")
 
 	var updatedEmail string
 	err = testDB.QueryRow("SELECT email FROM users WHERE username = ?", username).Scan(&updatedEmail)
@@ -284,10 +292,14 @@ func TestChangeUsername(t *testing.T) {
 		t.Fatalf("AddUser failed: %v", err)
 	}
 
+	PrintTableContents(testDB, "users")
+
 	err = ChangeUsername(testDB, username, newUsername)
 	if err != nil {
 		t.Fatalf("ChangeUsername failed: %v", err)
 	}
+
+	PrintTableContents(testDB, "users")
 
 	var updatedUsername string
 	err = testDB.QueryRow("SELECT username FROM users WHERE username = ?", newUsername).Scan(&updatedUsername)
