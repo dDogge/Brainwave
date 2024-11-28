@@ -176,3 +176,32 @@ func TestRemoveUser(t *testing.T) {
 		t.Error("Expected RemoveUser to fail for nonexistent user, but it succeeded")
 	}
 }
+
+func TestCheckPassword(t *testing.T) {
+	username := "passwordUser"
+	email := "password@mail.com"
+	password := "securepassword"
+
+	err := AddUser(testDB, username, email, password)
+	if err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	valid, err := CheckPassword(testDB, username, password)
+	if err != nil {
+		t.Fatalf("CheckPassword failed: %v", err)
+	}
+
+	if !valid {
+		t.Errorf("expected password to be valid for user %s", username)
+	}
+
+	valid, err = CheckPassword(testDB, username, "wrongpassword")
+	if err != nil {
+		t.Fatalf("CheckPassword failed: %v", err)
+	}
+
+	if valid {
+		t.Errorf("expected password to be invalid for user %s", username)
+	}
+}
