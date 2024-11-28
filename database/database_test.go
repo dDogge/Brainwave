@@ -205,3 +205,38 @@ func TestCheckPassword(t *testing.T) {
 		t.Errorf("expected password to be invalid for user %s", username)
 	}
 }
+
+func TestChangePassword(t *testing.T) {
+	username := "changePasswordUser"
+	email := "changepassword@mail.com"
+	password := "oldpassword"
+	newPassword := "newpassword"
+
+	err := AddUser(testDB, username, email, password)
+	if err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	err = ChangePassword(testDB, username, password, newPassword)
+	if err != nil {
+		t.Fatalf("ChangePassword failed: %v", err)
+	}
+
+	valid, err := CheckPassword(testDB, username, newPassword)
+	if err != nil {
+		t.Fatalf("CheckPassword failed: %v", err)
+	}
+
+	if !valid {
+		t.Errorf("expected new password to be valid for user %s", username)
+	}
+
+	valid, err = CheckPassword(testDB, username, password)
+	if err != nil {
+		t.Fatalf("CheckPassword failed: %v", err)
+	}
+
+	if valid {
+		t.Errorf("expected old password to be invalid for user %s", username)
+	}
+}
