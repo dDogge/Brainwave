@@ -240,3 +240,35 @@ func TestChangePassword(t *testing.T) {
 		t.Errorf("expected old password to be invalid for user %s", username)
 	}
 }
+
+func TestChangeEmail(t *testing.T) {
+	username := "changeEmailUser"
+	email := "oldemail@mail.com"
+	newEmail := "newemail@mail.com"
+	password := "password"
+
+	err := AddUser(testDB, username, email, password)
+	if err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	err = ChangeEmail(testDB, username, newEmail)
+	if err != nil {
+		t.Fatalf("ChangeEmail failed: %v", err)
+	}
+
+	var updatedEmail string
+	err = testDB.QueryRow("SELECT email FROM users WHERE username = ?", username).Scan(&updatedEmail)
+	if err != nil {
+		t.Fatalf("failed to fetch updated email: %v", err)
+	}
+
+	if updatedEmail != newEmail {
+		t.Errorf("expected email %s, got %s", newEmail, updatedEmail)
+	}
+
+	err = ChangeEmail(testDB, username, newEmail)
+	if err == nil {
+		t.Error("expected ChangeEmail to fail for duplicate email, but it succeeded")
+	}
+}
