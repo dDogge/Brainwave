@@ -402,3 +402,46 @@ func TestResetPassword(t *testing.T) {
 
 	PrintTableContents(testDB, "users")
 }
+
+func TestGetAllUsers(t *testing.T) {
+	users := []struct {
+		username string
+		email    string
+		password string
+	}{
+		{"user1", "user1@test.com", "password1"},
+		{"user2", "user2@test.com", "password2"},
+		{"user3", "user3@test.com", "password3"},
+	}
+
+	for _, user := range users {
+		err := AddUser(testDB, user.username, user.email, user.password)
+		if err != nil {
+			t.Fatalf("AddUser failed for %s: %v", user.username, err)
+		}
+	}
+
+	PrintTableContents(testDB, "users")
+
+	allUsers, err := GetAllUsers(testDB)
+	if err != nil {
+		t.Fatalf("GetAllUsers failed: %v", err)
+	}
+
+	if len(allUsers) != len(users) {
+		t.Errorf("Expected %d users, got %d", len(users), len(allUsers))
+	}
+
+	for _, user := range users {
+		found := false
+		for _, u := range allUsers {
+			if u["username"] == user.username {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("User %s not found in result", user.username)
+		}
+	}
+}
