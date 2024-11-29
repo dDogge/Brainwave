@@ -321,3 +321,35 @@ func TestChangeUsername(t *testing.T) {
 		t.Error("expected ChangeUsername to fail for invalid username, but it succeeded")
 	}
 }
+
+func TestGeneratePasswordResetCode(t *testing.T) {
+	username := "resetUser"
+	email := "resetuser@test.com"
+	password := "testpassword"
+
+	err := AddUser(testDB, username, email, password)
+	if err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	resetCode, err := GeneratePasswordResetCode(testDB, email)
+	if err != nil {
+		t.Fatalf("GeneratePasswordResetCode failed: %v", err)
+	}
+
+	if resetCode == "" {
+		t.Error("Expected a reset code to be generated, got an empty string")
+	}
+
+	PrintTableContents(testDB, "users")
+
+	var storedResetCode string
+	err = testDB.QueryRow("SELECT reset_code FROM users WHERE email = ?", email).Scan(&storedResetCode)
+	if err != nil {
+		t.Fatalf("Failed to fetch reset code: %v", err)
+	}
+
+	if storedResetCode != resetCode {
+		t.Errorf("Expected reset code %s, got %s", resetCode, storedResetCode)
+	}
+}

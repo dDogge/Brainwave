@@ -220,7 +220,7 @@ func GeneratePasswordResetCode(db *sql.DB, email string) (string, error) {
 		return "", fmt.Errorf("could not fetch user ID: %w", err)
 	}
 
-	var code int = rand.IntN(1000000)
+	var code int = rand.IntN(900000) + 100000
 	var resetCode string = strconv.Itoa(code)
 	_, err = db.Exec("UPDATE users SET reset_code = ? WHERE id = ?", resetCode, userID)
 	if err != nil {
