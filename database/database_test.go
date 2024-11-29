@@ -353,3 +353,52 @@ func TestGeneratePasswordResetCode(t *testing.T) {
 		t.Errorf("Expected reset code %s, got %s", resetCode, storedResetCode)
 	}
 }
+
+func TestResetPassword(t *testing.T) {
+	username := "resetPasswordUser"
+	email := "resetpassword@test.com"
+	password := "oldpassword"
+	newPassword := "newpassword"
+
+	err := AddUser(testDB, username, email, password)
+	if err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "users")
+
+	resetCode, err := GeneratePasswordResetCode(testDB, email)
+	if err != nil {
+		t.Fatalf("GeneratePasswordResetCode failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "users")
+
+	err = ResetPassword(testDB, email, resetCode, newPassword)
+	if err != nil {
+		t.Fatalf("ResetPassword failed: %v", err)
+	}
+
+	valid, err := CheckPassword(testDB, username, newPassword)
+	if err != nil {
+		t.Fatalf("CheckPassword failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "users")
+
+	if !valid {
+		t.Errorf("Expected new password to be valid for user %s", username)
+	}
+
+	var storedResetCode sql.NullString
+	err = testDB.QueryRow("SELECT reset_code FROM users WHERE email = ?", email).Scan(&storedResetCode)
+	if err != nil {
+		t.Fatalf("Failed to fetch reset_code: %v", err)
+	}
+
+	if storedResetCode.Valid {
+		t.Errorf("Expected reset code to be cleared, but found: %s", storedResetCode.String)
+	}
+
+	PrintTableContents(testDB, "users")
+}
