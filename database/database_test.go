@@ -457,8 +457,6 @@ func TestAddTopic(t *testing.T) {
 		t.Fatalf("AddUser failed: %v", err)
 	}
 
-	PrintTableContents(testDB, "users")
-
 	err = AddTopic(testDB, topicTitle, username)
 	if err != nil {
 		t.Fatalf("AddTopic failed: %v", err)
@@ -489,5 +487,44 @@ func TestAddTopic(t *testing.T) {
 	err = AddTopic(testDB, topicTitle, username)
 	if err == nil {
 		t.Error("expected AddTopic to fail for duplicate title, but it succeeded")
+	}
+}
+
+func TestRemoveTopic(t *testing.T) {
+	username := "removeTopicUser"
+	email := "removetopicuser@test.com"
+	password := "password"
+	topicTitle := "Removable Topic"
+
+	err := AddUser(testDB, username, email, password)
+	if err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	err = AddTopic(testDB, topicTitle, username)
+	if err != nil {
+		t.Fatalf("AddTopic failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "topics")
+
+	err = RemoveTopic(testDB, topicTitle)
+	if err != nil {
+		t.Fatalf("RemoveTopic failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "topics")
+
+	var storedTitle string
+	err = testDB.QueryRow("SELECT title FROM topics WHERE title = ?", topicTitle).Scan(&storedTitle)
+	if err == nil {
+		t.Errorf("expected topic %s to be removed, but it still exists", topicTitle)
+	} else if err != sql.ErrNoRows {
+		t.Fatalf("unexpected error while checking topic removal: %v", err)
+	}
+
+	err = RemoveTopic(testDB, "Nonexistent Topic")
+	if err == nil {
+		t.Error("expected RemoveTopic to fail for nonexistent topic, but it succeeded")
 	}
 }
