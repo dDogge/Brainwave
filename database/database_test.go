@@ -338,7 +338,7 @@ func TestGeneratePasswordResetCode(t *testing.T) {
 	}
 
 	if resetCode == "" {
-		t.Error("Expected a reset code to be generated, got an empty string")
+		t.Error("expected a reset code to be generated, got an empty string")
 	}
 
 	PrintTableContents(testDB, "users")
@@ -346,11 +346,11 @@ func TestGeneratePasswordResetCode(t *testing.T) {
 	var storedResetCode string
 	err = testDB.QueryRow("SELECT reset_code FROM users WHERE email = ?", email).Scan(&storedResetCode)
 	if err != nil {
-		t.Fatalf("Failed to fetch reset code: %v", err)
+		t.Fatalf("failed to fetch reset code: %v", err)
 	}
 
 	if storedResetCode != resetCode {
-		t.Errorf("Expected reset code %s, got %s", resetCode, storedResetCode)
+		t.Errorf("expected reset code %s, got %s", resetCode, storedResetCode)
 	}
 }
 
@@ -387,17 +387,17 @@ func TestResetPassword(t *testing.T) {
 	PrintTableContents(testDB, "users")
 
 	if !valid {
-		t.Errorf("Expected new password to be valid for user %s", username)
+		t.Errorf("expected new password to be valid for user %s", username)
 	}
 
 	var storedResetCode sql.NullString
 	err = testDB.QueryRow("SELECT reset_code FROM users WHERE email = ?", email).Scan(&storedResetCode)
 	if err != nil {
-		t.Fatalf("Failed to fetch reset_code: %v", err)
+		t.Fatalf("failed to fetch reset_code: %v", err)
 	}
 
 	if storedResetCode.Valid {
-		t.Errorf("Expected reset code to be cleared, but found: %s", storedResetCode.String)
+		t.Errorf("expected reset code to be cleared, but found: %s", storedResetCode.String)
 	}
 
 	PrintTableContents(testDB, "users")
@@ -429,7 +429,7 @@ func TestGetAllUsers(t *testing.T) {
 	}
 
 	if len(allUsers) != len(users) {
-		t.Errorf("Expected %d users, got %d", len(users), len(allUsers))
+		t.Errorf("expected %d users, got %d", len(users), len(allUsers))
 	}
 
 	for _, user := range users {
@@ -441,7 +441,53 @@ func TestGetAllUsers(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("User %s not found in result", user.username)
+			t.Errorf("user %s not found in result", user.username)
 		}
+	}
+}
+
+func TestAddTopic(t *testing.T) {
+	username := "topicUser"
+	email := "topicuser@test.com"
+	password := "password"
+	topicTitle := "Test Topic"
+
+	err := AddUser(testDB, username, email, password)
+	if err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "users")
+
+	err = AddTopic(testDB, topicTitle, username)
+	if err != nil {
+		t.Fatalf("AddTopic failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "topics")
+
+	var storedTitle string
+	err = testDB.QueryRow("SELECT title FROM topics WHERE title = ?", topicTitle).Scan(&storedTitle)
+	if err != nil {
+		t.Fatalf("failed to fetch topic: %v", err)
+	}
+
+	if storedTitle != topicTitle {
+		t.Errorf("expected topic title %s, got %s", topicTitle, storedTitle)
+	}
+
+	var topicsOpened int
+	err = testDB.QueryRow("SELECT topics_opened FROM users WHERE username = ?", username).Scan(&topicsOpened)
+	if err != nil {
+		t.Fatalf("failed to fetch topics_opened for user: %v", err)
+	}
+
+	if topicsOpened != 1 {
+		t.Errorf("expected topics_opened to be 1, got %d", topicsOpened)
+	}
+
+	err = AddTopic(testDB, topicTitle, username)
+	if err == nil {
+		t.Error("expected AddTopic to fail for duplicate title, but it succeeded")
 	}
 }
