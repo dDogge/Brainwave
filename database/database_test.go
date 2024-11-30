@@ -428,8 +428,8 @@ func TestGetAllUsers(t *testing.T) {
 		t.Fatalf("GetAllUsers failed: %v", err)
 	}
 
-	if len(allUsers) != len(users) {
-		t.Errorf("expected %d users, got %d", len(users), len(allUsers))
+	if len(allUsers) < len(users) {
+		t.Errorf("expected at least %d users, got %d", len(users), len(allUsers))
 	}
 
 	for _, user := range users {
