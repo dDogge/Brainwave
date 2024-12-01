@@ -463,6 +463,7 @@ func TestAddTopic(t *testing.T) {
 	}
 
 	PrintTableContents(testDB, "topics")
+	PrintTableContents(testDB, "users")
 
 	var storedTitle string
 	err = testDB.QueryRow("SELECT title FROM topics WHERE title = ?", topicTitle).Scan(&storedTitle)
@@ -526,5 +527,59 @@ func TestRemoveTopic(t *testing.T) {
 	err = RemoveTopic(testDB, "Nonexistent Topic")
 	if err == nil {
 		t.Error("expected RemoveTopic to fail for nonexistent topic, but it succeeded")
+	}
+}
+
+func TestUpVoteAndDownVoteTopic(t *testing.T) {
+	username := "voteUser"
+	email := "voteuser@test.com"
+	password := "password"
+	topicTitle := "Votable Topic"
+
+	err := AddUser(testDB, username, email, password)
+	if err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	err = AddTopic(testDB, topicTitle, username)
+	if err != nil {
+		t.Fatalf("AddTopic failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "topics")
+
+	var initialUpvotes int
+	err = testDB.QueryRow("SELECT upvotes FROM topics WHERE title = ?", topicTitle).Scan(&initialUpvotes)
+	if err != nil {
+		t.Fatalf("failed to fetch initial upvotes for topic: %v", err)
+	}
+
+	err = UpVoteTopic(testDB, topicTitle, username)
+	if err != nil {
+		t.Fatalf("UpVoteTopic failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "topics")
+
+	var updatedUpvotes int
+	err = testDB.QueryRow("SELECT upvotes FROM topics WHERE title = ?", topicTitle).Scan(&updatedUpvotes)
+	if err != nil {
+		t.Fatalf("expected upvotes to be %d, got %d", initialUpvotes+1, updatedUpvotes)
+	}
+
+	err = DownVoteTopic(testDB, topicTitle, username)
+	if err != nil {
+		t.Fatalf("DownVoteTopic failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "topics")
+
+	err = testDB.QueryRow("SELECT upvotes FROM topics WHERE title = ?", topicTitle).Scan(&updatedUpvotes)
+	if err != nil {
+		t.Fatalf("failed to fetch updated upvotes for topic: %v", err)
+	}
+
+	if updatedUpvotes != initialUpvotes {
+		t.Errorf("expected upvotes to be %d, got %d", initialUpvotes, updatedUpvotes)
 	}
 }
