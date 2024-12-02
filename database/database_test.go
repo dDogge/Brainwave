@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -581,5 +582,52 @@ func TestUpVoteAndDownVoteTopic(t *testing.T) {
 
 	if updatedUpvotes != initialUpvotes {
 		t.Errorf("expected upvotes to be %d, got %d", initialUpvotes, updatedUpvotes)
+	}
+}
+
+func TestGetAllTopics(t *testing.T) {
+	topics := []struct {
+		title    string
+		username string
+	}{
+		{"Topic 1", "user1"},
+		{"Topic 2", "user2"},
+		{"Topic 3", "user3"},
+	}
+
+	for _, topic := range topics {
+		err := AddUser(testDB, topic.username, fmt.Sprintf("%s@test.com", topic.username), "password")
+		if err != nil {
+			t.Fatalf("AddUser failed for %s: %v", topic.username, err)
+		}
+
+		err = AddTopic(testDB, topic.title, topic.username)
+		if err != nil {
+			t.Fatalf("AddTopic failed for %s: %v", topic.title, err)
+		}
+	}
+
+	PrintTableContents(testDB, "topics")
+
+	allTopics, err := GetAllTopics(testDB)
+	if err != nil {
+		t.Fatalf("GetAllTopics failed: %v", err)
+	}
+
+	if len(allTopics) < len(topics) {
+		t.Errorf("expected at least %d topics, got %d", len(topics), len(allTopics))
+	}
+
+	for _, topic := range topics {
+		found := false
+		for _, t := range allTopics {
+			if t["title"] == topic.title {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("topic %s not found in result", topic.title)
+		}
 	}
 }
