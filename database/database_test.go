@@ -666,3 +666,50 @@ func TestGetTopicsByTitle(t *testing.T) {
 		t.Errorf("expected error for nonexistent topic, but got nil")
 	}
 }
+
+func TestCountTopics(t *testing.T) {
+	initialCount, err := CountTopics(testDB)
+	if err != nil {
+		t.Fatalf("CountTopics failed initially: %v", err)
+	}
+
+	username := "countUser"
+	topicTitle := "Countable Topic"
+
+	err = AddUser(testDB, username, fmt.Sprintf("%s@test.com", username), "password")
+	if err != nil {
+		t.Fatalf("AddUser failed for %s: %v", username, err)
+	}
+
+	err = AddTopic(testDB, topicTitle, username)
+	if err != nil {
+		t.Fatalf("AddTopic failed for %s: %v", topicTitle, err)
+	}
+
+	PrintTableContents(testDB, "topics")
+
+	currentCount, err := CountTopics(testDB)
+	if err != nil {
+		t.Fatalf("CountTopics failed after adding a topic: %v", err)
+	}
+
+	if currentCount != initialCount+1 {
+		t.Errorf("expected topic count to be %d, but got %d", initialCount+1, currentCount)
+	}
+
+	err = RemoveTopic(testDB, topicTitle)
+	if err != nil {
+		t.Fatalf("Removetopic failed for %s: %v", topicTitle, err)
+	}
+
+	PrintTableContents(testDB, "topics")
+
+	finalCount, err := CountTopics(testDB)
+	if err != nil {
+		t.Fatalf("CountTopics failed after removing a topic: %v", err)
+	}
+
+	if finalCount != initialCount {
+		t.Errorf("expected topic count to return to %d, but got %d", initialCount, finalCount)
+	}
+}
