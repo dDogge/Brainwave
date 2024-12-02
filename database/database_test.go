@@ -631,3 +631,38 @@ func TestGetAllTopics(t *testing.T) {
 		}
 	}
 }
+
+func TestGetTopicsByTitle(t *testing.T) {
+	username := "user1"
+	topicTitle := "Unique Topic"
+
+	err := AddUser(testDB, username, fmt.Sprintf("%s@test.com", username), "password")
+	if err != nil {
+		t.Fatalf("AddUser failed for %s: %v", username, err)
+	}
+
+	err = AddTopic(testDB, topicTitle, username)
+	if err != nil {
+		t.Fatalf("AddTopic failed for %s: %v", username, err)
+	}
+
+	PrintTableContents(testDB, "topics")
+
+	topic, err := GetTopicByTitle(testDB, topicTitle)
+	if err != nil {
+		t.Fatalf("GetTopicByTitle failed: %v", err)
+	}
+
+	if topic["title"] != topicTitle {
+		t.Errorf("expected title %s, got %s", topicTitle, topic["title"])
+	}
+
+	if topic["creator_id"] == nil {
+		t.Errorf("expected a creator_id for topic %s, but got nil", topicTitle)
+	}
+
+	_, err = GetTopicByTitle(testDB, "Nonexsitent Topic")
+	if err == nil {
+		t.Errorf("expected error for nonexistent topic, but got nil")
+	}
+}
