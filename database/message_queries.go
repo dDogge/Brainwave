@@ -48,7 +48,7 @@ func AddMessage(db *sql.DB, topic, message, username string) error {
 		return fmt.Errorf("could not fetch creator_id: %w", err)
 	}
 
-	stmt, err := db.Prepare("INSERT INTO topics (message, user_id, topic_id) VALUES (?, ?, ?)")
+	stmt, err := db.Prepare("INSERT INTO messages (message, user_id, topic_id) VALUES (?, ?, ?)")
 	if err != nil {
 		log.Printf("error preparing statement: %v", err)
 		return fmt.Errorf("could not prepare statement: %w", err)

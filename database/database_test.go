@@ -713,3 +713,62 @@ func TestCountTopics(t *testing.T) {
 		t.Errorf("expected topic count to return to %d, but got %d", initialCount, finalCount)
 	}
 }
+
+func TestAddMessage(t *testing.T) {
+	username := "messageUser"
+	topic := "messageTopic"
+	message := "This is a test message."
+
+	err := AddUser(testDB, username, fmt.Sprintf("%s@test.com", username), "password")
+	if err != nil {
+		t.Fatalf("AddUser failed for %s: %v", username, err)
+	}
+
+	err = AddTopic(testDB, topic, username)
+	if err != nil {
+		t.Fatalf("AddTopic failed for %s: %v", topic, err)
+	}
+
+	PrintTableContents(testDB, "users")
+	PrintTableContents(testDB, "topics")
+
+	err = AddMessage(testDB, topic, message, username)
+	if err != nil {
+		t.Fatalf("AddMessage failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "messages")
+
+	var storedMessage string
+	var storedUserID, storedTopicID int
+	err = testDB.QueryRow("SELECT message, user_id, topic_id FROM messages WHERE message = ?", message).
+		Scan(&storedMessage, &storedUserID, &storedTopicID)
+	if err != nil {
+		t.Fatalf("Failed to fetch message: %v", err)
+	}
+
+	if storedMessage != message {
+		t.Errorf("expected message %s, got %s", message, storedMessage)
+	}
+
+	var messagesSent, messagesInTopic int
+	err = testDB.QueryRow("SELECT messages_sent FROM users WHERE username = ?", username).Scan(&messagesSent)
+	if err != nil {
+		t.Fatalf("Failed to fetch messages_sent for user: %v", err)
+	}
+
+	if messagesSent != 1 {
+		t.Errorf("expected messages_sent to be 1, got %d", messagesSent)
+	}
+
+	err = testDB.QueryRow("SELECT messages FROM topics WHERE title = ?", topic).Scan(&messagesInTopic)
+	if err != nil {
+		t.Fatalf("Failed to fetch messages count for topic: %v", err)
+	}
+
+	if messagesInTopic != 1 {
+		t.Errorf("expected messages in topic to be 1, got %d", messagesInTopic)
+	}
+
+	PrintTableContents(testDB, "users")
+}
