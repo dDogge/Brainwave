@@ -744,7 +744,7 @@ func TestAddMessage(t *testing.T) {
 	err = testDB.QueryRow("SELECT message, user_id, topic_id FROM messages WHERE message = ?", message).
 		Scan(&storedMessage, &storedUserID, &storedTopicID)
 	if err != nil {
-		t.Fatalf("Failed to fetch message: %v", err)
+		t.Fatalf("failed to fetch message: %v", err)
 	}
 
 	if storedMessage != message {
@@ -754,7 +754,7 @@ func TestAddMessage(t *testing.T) {
 	var messagesSent, messagesInTopic int
 	err = testDB.QueryRow("SELECT messages_sent FROM users WHERE username = ?", username).Scan(&messagesSent)
 	if err != nil {
-		t.Fatalf("Failed to fetch messages_sent for user: %v", err)
+		t.Fatalf("failed to fetch messages_sent for user: %v", err)
 	}
 
 	if messagesSent != 1 {
@@ -763,7 +763,7 @@ func TestAddMessage(t *testing.T) {
 
 	err = testDB.QueryRow("SELECT messages FROM topics WHERE title = ?", topic).Scan(&messagesInTopic)
 	if err != nil {
-		t.Fatalf("Failed to fetch messages count for topic: %v", err)
+		t.Fatalf("failed to fetch messages count for topic: %v", err)
 	}
 
 	if messagesInTopic != 1 {
@@ -771,4 +771,66 @@ func TestAddMessage(t *testing.T) {
 	}
 
 	PrintTableContents(testDB, "users")
+}
+
+func TestSetParent(t *testing.T) {
+	username := "parentUser"
+	topic := "parentTopic"
+	parentMessage := "This is the parent message."
+	childMessage := "This is the child message."
+
+	err := AddUser(testDB, username, fmt.Sprintf("%s@test.com", username), "password")
+	if err != nil {
+		t.Fatalf("AddUser failed for %s: %v", username, err)
+	}
+
+	err = AddTopic(testDB, topic, username)
+	if err != nil {
+		t.Fatalf("AddTopic failed for %s: %v", topic, err)
+	}
+
+	err = AddMessage(testDB, topic, parentMessage, username)
+	if err != nil {
+		t.Fatalf("AddMessage failed for parentMessage: %v", err)
+	}
+
+	err = AddMessage(testDB, topic, childMessage, username)
+	if err != nil {
+		t.Fatalf("AddMessage failed for childMessage: %v", err)
+	}
+
+	PrintTableContents(testDB, "messages")
+
+	var parentID, childID int
+	err = testDB.QueryRow("SELECT id FROM messages WHERE message = ?", parentMessage).Scan(&parentID)
+	if err != nil {
+		t.Fatalf("failed to fetch parentID: %v", err)
+	}
+
+	err = testDB.QueryRow("SELECT id FROM messages WHERE message = ?", childMessage).Scan(&childID)
+	if err != nil {
+		t.Fatalf("failed to fetch childID: %v", err)
+	}
+
+	err = SetParent(testDB, parentID, childID)
+	if err != nil {
+		t.Fatalf("SetParent failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "messages")
+
+	var storedParentID int
+	err = testDB.QueryRow("SELECT parent_id FROM messages WHERE id = ?", childID).Scan(&storedParentID)
+	if err != nil {
+		t.Fatalf("failed to fetch parent_id for child message: %v", err)
+	}
+
+	if storedParentID != parentID {
+		t.Errorf("expected parent_id %d, got %d", parentID, storedParentID)
+	}
+
+	err = SetParent(testDB, parentID, childID+1)
+	if err == nil {
+		t.Errorf("expected error for mismatched topics, but got nil")
+	}
 }
