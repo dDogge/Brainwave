@@ -834,3 +834,65 @@ func TestSetParent(t *testing.T) {
 		t.Errorf("expected error for mismatched topics, but got nil")
 	}
 }
+
+func TestGetMessagesByTopic(t *testing.T) {
+	topicTitle := "testTopicGet"
+	username := "testUser"
+	message1 := "This is the first test message"
+	message2 := "This is the second test message"
+
+	err := AddUser(testDB, username, "testuser@mail.com", "password")
+	if err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	err = AddTopic(testDB, topicTitle, username)
+	if err != nil {
+		t.Fatalf("AddTopic failed: %v", err)
+	}
+
+	var topicID int
+	err = testDB.QueryRow("SELECT id FROM topics WHERE title = ?", topicTitle).Scan(&topicID)
+	if err != nil {
+		t.Fatalf("Failed to fetch topic ID: %v", err)
+	}
+
+	err = AddMessage(testDB, topicTitle, message1, username)
+	if err != nil {
+		t.Fatalf("AddMessage failed %v", err)
+	}
+
+	err = AddMessage(testDB, topicTitle, message2, username)
+	if err != nil {
+		t.Fatalf("AddMessage failed %v", err)
+	}
+
+	PrintTableContents(testDB, "messages")
+
+	messages, err := GetMessagesByTopic(testDB, topicID)
+	if err != nil {
+		t.Fatalf("GetMessagesByTopic failed: %v", err)
+	}
+
+	if len(messages) != 2 {
+		t.Errorf("Expected 2 messages, got %d", len(messages))
+	}
+
+	foundMessage1 := false
+	foundMessage2 := false
+	for _, msg := range messages {
+		if msg["message"] == message1 {
+			foundMessage1 = true
+		} else if msg["message"] == message2 {
+			foundMessage2 = true
+		}
+	}
+
+	if !foundMessage1 {
+		t.Errorf("Message 1 not found in results")
+	}
+
+	if !foundMessage2 {
+		t.Errorf("Message 2 not found in results")
+	}
+}
