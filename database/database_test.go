@@ -899,7 +899,7 @@ func TestGetMessagesByTopic(t *testing.T) {
 
 func TestLikeMessage(t *testing.T) {
 	topicTitle := "likeTopic"
-	username := "testUser"
+	username := "likeUser"
 	message := "This is a message to like"
 
 	err := AddUser(testDB, username, "likeuser@mail.com", "password")
@@ -930,6 +930,8 @@ func TestLikeMessage(t *testing.T) {
 		t.Fatalf("LikeMessage failed: %v", err)
 	}
 
+	PrintTableContents(testDB, "messages")
+
 	var likes int
 	err = testDB.QueryRow("SELECT likes FROM messages WHERE id = ?", messageID).Scan(&likes)
 	if err != nil {
@@ -937,6 +939,59 @@ func TestLikeMessage(t *testing.T) {
 	}
 
 	if likes != 1 {
+		t.Errorf("expected 1 like, got %d", likes)
+	}
+}
+
+func TestDislikeMessage(t *testing.T) {
+	topicTitle := "dislikeTopic"
+	username := "dislikeUser"
+	message := "This is a message to dislike"
+
+	err := AddUser(testDB, username, "dislikeuser@mail.com", "password")
+	if err != nil {
+		t.Fatalf("AddUser failed: %v", err)
+	}
+
+	err = AddTopic(testDB, topicTitle, username)
+	if err != nil {
+		t.Fatalf("AddTopic failed: %v", err)
+	}
+
+	err = AddMessage(testDB, topicTitle, message, username)
+	if err != nil {
+		t.Fatalf("AddMessage failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "messages")
+
+	var messageID int
+	err = testDB.QueryRow("SELECT id FROM messages WHERE message = ?", message).Scan(&messageID)
+	if err != nil {
+		t.Fatalf("failed to fetch message ID: %v", err)
+	}
+
+	err = LikeMessage(testDB, messageID)
+	if err != nil {
+		t.Fatalf("LikeMessage failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "messages")
+
+	err = DislikeMessage(testDB, messageID)
+	if err != nil {
+		t.Fatalf("DislikeMessage failed: %v", err)
+	}
+
+	PrintTableContents(testDB, "messages")
+
+	var likes int
+	err = testDB.QueryRow("SELECT likes FROM messages WHERE id = ?", messageID).Scan(&likes)
+	if err != nil {
+		t.Fatalf("failed to fetch likes: %v", err)
+	}
+
+	if likes != 0 {
 		t.Errorf("expected 1 like, got %d", likes)
 	}
 }
