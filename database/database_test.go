@@ -590,9 +590,9 @@ func TestGetAllTopics(t *testing.T) {
 		title    string
 		username string
 	}{
-		{"Topic 1", "user1"},
-		{"Topic 2", "user2"},
-		{"Topic 3", "user3"},
+		{"Topic 1", "userTopic1"},
+		{"Topic 2", "userTopic2"},
+		{"Topic 3", "userTopic3"},
 	}
 
 	for _, topic := range topics {
@@ -633,7 +633,7 @@ func TestGetAllTopics(t *testing.T) {
 }
 
 func TestGetTopicsByTitle(t *testing.T) {
-	username := "user1"
+	username := "userTopicByTitle"
 	topicTitle := "Unique Topic"
 
 	err := AddUser(testDB, username, fmt.Sprintf("%s@test.com", username), "password")
