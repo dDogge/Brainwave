@@ -174,7 +174,7 @@ func TestRemoveUser(t *testing.T) {
 
 	err = RemoveUser(testDB, "nonexistentUser")
 	if err == nil {
-		t.Error("Expected RemoveUser to fail for nonexistent user, but it succeeded")
+		t.Error("expected RemoveUser to fail for nonexistent user, but it succeeded")
 	}
 }
 
@@ -418,7 +418,7 @@ func TestGetAllUsers(t *testing.T) {
 	for _, user := range users {
 		err := AddUser(testDB, user.username, user.email, user.password)
 		if err != nil {
-			t.Fatalf("AddUser failed for %s: %v", user.username, err)
+			t.Fatalf("AddUser failed: %v", err)
 		}
 	}
 
@@ -598,12 +598,12 @@ func TestGetAllTopics(t *testing.T) {
 	for _, topic := range topics {
 		err := AddUser(testDB, topic.username, fmt.Sprintf("%s@test.com", topic.username), "password")
 		if err != nil {
-			t.Fatalf("AddUser failed for %s: %v", topic.username, err)
+			t.Fatalf("AddUser failed: %v", err)
 		}
 
 		err = AddTopic(testDB, topic.title, topic.username)
 		if err != nil {
-			t.Fatalf("AddTopic failed for %s: %v", topic.title, err)
+			t.Fatalf("AddTopic failed: %v", err)
 		}
 	}
 
@@ -638,12 +638,12 @@ func TestGetTopicsByTitle(t *testing.T) {
 
 	err := AddUser(testDB, username, fmt.Sprintf("%s@test.com", username), "password")
 	if err != nil {
-		t.Fatalf("AddUser failed for %s: %v", username, err)
+		t.Fatalf("AddUser failed: %v", err)
 	}
 
 	err = AddTopic(testDB, topicTitle, username)
 	if err != nil {
-		t.Fatalf("AddTopic failed for %s: %v", username, err)
+		t.Fatalf("AddTopic failed: %v", err)
 	}
 
 	PrintTableContents(testDB, "topics")
@@ -678,12 +678,12 @@ func TestCountTopics(t *testing.T) {
 
 	err = AddUser(testDB, username, fmt.Sprintf("%s@test.com", username), "password")
 	if err != nil {
-		t.Fatalf("AddUser failed for %s: %v", username, err)
+		t.Fatalf("AddUser failed: %v", err)
 	}
 
 	err = AddTopic(testDB, topicTitle, username)
 	if err != nil {
-		t.Fatalf("AddTopic failed for %s: %v", topicTitle, err)
+		t.Fatalf("AddTopic failed: %v", err)
 	}
 
 	PrintTableContents(testDB, "topics")
@@ -699,7 +699,7 @@ func TestCountTopics(t *testing.T) {
 
 	err = RemoveTopic(testDB, topicTitle)
 	if err != nil {
-		t.Fatalf("Removetopic failed for %s: %v", topicTitle, err)
+		t.Fatalf("Removetopic failed: %v", err)
 	}
 
 	PrintTableContents(testDB, "topics")
@@ -721,12 +721,12 @@ func TestAddMessage(t *testing.T) {
 
 	err := AddUser(testDB, username, fmt.Sprintf("%s@test.com", username), "password")
 	if err != nil {
-		t.Fatalf("AddUser failed for %s: %v", username, err)
+		t.Fatalf("AddUser failed: %v", err)
 	}
 
 	err = AddTopic(testDB, topic, username)
 	if err != nil {
-		t.Fatalf("AddTopic failed for %s: %v", topic, err)
+		t.Fatalf("AddTopic failed: %v", err)
 	}
 
 	PrintTableContents(testDB, "users")
@@ -781,12 +781,12 @@ func TestSetParent(t *testing.T) {
 
 	err := AddUser(testDB, username, fmt.Sprintf("%s@test.com", username), "password")
 	if err != nil {
-		t.Fatalf("AddUser failed for %s: %v", username, err)
+		t.Fatalf("AddUser failed: %v", err)
 	}
 
 	err = AddTopic(testDB, topic, username)
 	if err != nil {
-		t.Fatalf("AddTopic failed for %s: %v", topic, err)
+		t.Fatalf("AddTopic failed: %v", err)
 	}
 
 	err = AddMessage(testDB, topic, parentMessage, username)
@@ -889,11 +889,11 @@ func TestGetMessagesByTopic(t *testing.T) {
 	}
 
 	if !foundMessage1 {
-		t.Errorf("Message 1 not found in results")
+		t.Errorf("message 1 not found in results")
 	}
 
 	if !foundMessage2 {
-		t.Errorf("Message 2 not found in results")
+		t.Errorf("message 2 not found in results")
 	}
 }
 
