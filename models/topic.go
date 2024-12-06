@@ -7,5 +7,6 @@ type Topic struct {
 	Title        string    `json:"title"`
 	CreatorID    int       `json:"creator_id"`
 	Messages     int       `json:"messages"`
+	Upvotes      int       `json:"upvotes"`
 	CreationDate time.Time `json:"creation_date"`
 }
