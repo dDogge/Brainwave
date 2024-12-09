@@ -40,6 +40,16 @@ type ChangeEmailResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+type ChangeUsernameRequest struct {
+	Username    string `json:"username"`
+	NewUsername string `json:"new_username"`
+}
+
+type ChangeUsernameResponse struct {
+	Message string `json:"message"`
+	Error   string `json:"error,omitempty"`
+}
+
 func CreateUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var reqBody struct {
 		Username string `json:"username"`
@@ -166,7 +176,7 @@ func ChangeEmailHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		if reqBody.Username == "" || reqBody.Email == "" {
-			http.Error(w, "all fields (username, current_password, new_password) are required", http.StatusBadRequest)
+			http.Error(w, "all fields (username, email) are required", http.StatusBadRequest)
 			return
 		}
 
@@ -184,6 +194,46 @@ func ChangeEmailHandler(db *sql.DB) http.HandlerFunc {
 
 		resp := ChangeEmailResponse{
 			Message: "email changed successfully",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func ChangeUsernameHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var reqBody ChangeUsernameRequest
+		err := json.NewDecoder(r.Body).Decode(&reqBody)
+		if err != nil {
+			http.Error(w, "invalid JSON format", http.StatusBadRequest)
+			return
+		}
+
+		if reqBody.Username == "" || reqBody.NewUsername == "" {
+			http.Error(w, "all fields (username, new_username) are required", http.StatusBadRequest)
+			return
+		}
+
+		err = database.ChangeUsername(db, reqBody.Username, reqBody.NewUsername)
+		if err != nil {
+			var statusCode int
+			if errors.Is(err, sql.ErrNoRows) || err.Error() == "incorrect current password" {
+				statusCode = http.StatusUnauthorized
+			} else {
+				statusCode = http.StatusInternalServerError
+			}
+			http.Error(w, err.Error(), statusCode)
+			return
+		}
+
+		resp := ChangeUsernameResponse{
+			Message: "username changed successfully",
 		}
 
 		w.Header().Set("Content-Type", "application/json")
