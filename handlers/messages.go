@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/dDogge/Brainwave/database"
@@ -16,6 +17,17 @@ type CheckPasswordRequest struct {
 type CheckPasswordResponse struct {
 	Valid bool   `json:"valid"`
 	Error string `json:"error,omitempty"`
+}
+
+type ChangePasswordRequest struct {
+	Username        string `json:"username"`
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+type ChangePasswordResponse struct {
+	Message string `json:"message"`
+	Error   string `json:"error,omitempty"`
 }
 
 func CreateUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
@@ -82,6 +94,46 @@ func CheckPasswordHandler(db *sql.DB) http.HandlerFunc {
 		}
 		if !valid {
 			resp.Error = "invalid username or password"
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func ChangePasswordHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var reqBody ChangePasswordRequest
+		err := json.NewDecoder(r.Body).Decode(&reqBody)
+		if err != nil {
+			http.Error(w, "invalid JSON format", http.StatusBadRequest)
+			return
+		}
+
+		if reqBody.Username == "" || reqBody.CurrentPassword == "" || reqBody.NewPassword == "" {
+			http.Error(w, "all fields (username, current_password, new_password) are required", http.StatusBadRequest)
+			return
+		}
+
+		err = database.ChangePassword(db, reqBody.Username, reqBody.CurrentPassword, reqBody.NewPassword)
+		if err != nil {
+			var statusCode int
+			if errors.Is(err, sql.ErrNoRows) || err.Error() == "incorrect current password" {
+				statusCode = http.StatusUnauthorized
+			} else {
+				statusCode = http.StatusInternalServerError
+			}
+			http.Error(w, err.Error(), statusCode)
+			return
+		}
+
+		resp := ChangePasswordResponse{
+			Message: "password changed successfully",
 		}
 
 		w.Header().Set("Content-Type", "application/json")
