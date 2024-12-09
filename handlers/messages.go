@@ -182,13 +182,11 @@ func ChangeEmailHandler(db *sql.DB) http.HandlerFunc {
 
 		err = database.ChangeEmail(db, reqBody.Username, reqBody.Email)
 		if err != nil {
-			var statusCode int
-			if errors.Is(err, sql.ErrNoRows) || err.Error() == "incorrect current password" {
-				statusCode = http.StatusUnauthorized
-			} else {
-				statusCode = http.StatusInternalServerError
+			if err.Error() == "email is already in use" {
+				http.Error(w, err.Error(), http.StatusConflict)
+				return
 			}
-			http.Error(w, err.Error(), statusCode)
+			http.Error(w, "failed to change email", http.StatusInternalServerError)
 			return
 		}
 
@@ -222,13 +220,11 @@ func ChangeUsernameHandler(db *sql.DB) http.HandlerFunc {
 
 		err = database.ChangeUsername(db, reqBody.Username, reqBody.NewUsername)
 		if err != nil {
-			var statusCode int
-			if errors.Is(err, sql.ErrNoRows) || err.Error() == "incorrect current password" {
-				statusCode = http.StatusUnauthorized
-			} else {
-				statusCode = http.StatusInternalServerError
+			if err.Error() == "username is already in use" {
+				http.Error(w, err.Error(), http.StatusConflict)
+				return
 			}
-			http.Error(w, err.Error(), statusCode)
+			http.Error(w, "failed to change username", http.StatusInternalServerError)
 			return
 		}
 
