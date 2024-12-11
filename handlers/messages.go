@@ -236,3 +236,47 @@ func ChangeUsernameHandler(db *sql.DB) http.HandlerFunc {
 		json.NewEncoder(w).Encode(resp)
 	}
 }
+
+func RemoveUserHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var reqBody struct {
+			Username string `json:"username"`
+		}
+
+		err := json.NewDecoder(r.Body).Decode(&reqBody)
+		if err != nil {
+			http.Error(w, "invalid JSON format", http.StatusBadRequest)
+			return
+		}
+
+		if reqBody.Username == "" {
+			http.Error(w, "all fields (username) are required", http.StatusBadRequest)
+			return
+		}
+
+		err = database.RemoveUser(db, reqBody.Username)
+		if err != nil {
+			if err.Error() == "user not found" {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
+			http.Error(w, "failed to remove user", http.StatusInternalServerError)
+			return
+		}
+
+		resp := struct {
+			Message string `json:"message"`
+		}{
+			Message: "user removed successfully",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}
+}
