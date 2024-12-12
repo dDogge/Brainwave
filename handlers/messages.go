@@ -50,6 +50,16 @@ type ChangeUsernameResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+type GenerateResetCodeRequest struct {
+	Email string `json:"email"`
+}
+
+type GenerateResetCodeResponse struct {
+	Message    string `json:"message"`
+	ResetCode  string `json:"reset_code,omitempty"`
+	StatusCode int    `json:"-"`
+}
+
 func CreateUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var reqBody struct {
 		Username string `json:"username"`
@@ -273,6 +283,46 @@ func RemoveUserHandler(db *sql.DB) http.HandlerFunc {
 			Message string `json:"message"`
 		}{
 			Message: "user removed successfully",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func GeneratePasswordResetCodeHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var reqBody GenerateResetCodeRequest
+		err := json.NewDecoder(r.Body).Decode(&reqBody)
+		if err != nil {
+			http.Error(w, "invalid JSON format", http.StatusBadRequest)
+			return
+		}
+
+		if reqBody.Email == "" {
+			http.Error(w, "email field is required", http.StatusBadRequest)
+			return
+		}
+
+		resetCode, err := database.GeneratePasswordResetCode(db, reqBody.Email)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) || err.Error() == "email not found" {
+				http.Error(w, "email not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, "failed to generate password reset code", http.StatusInternalServerError)
+			return
+		}
+
+		resp := GenerateResetCodeResponse{
+			Message:   "password reset code generated successfully",
+			ResetCode: resetCode,
 		}
 
 		w.Header().Set("Content-Type", "application/json")
