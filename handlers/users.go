@@ -60,6 +60,17 @@ type GenerateResetCodeResponse struct {
 	StatusCode int    `json:"-"`
 }
 
+type ResetPasswordRequest struct {
+	Email       string `json:"email"`
+	ResetCode   string `json:"reset_code"`
+	NewPassword string `json:"new_password"`
+}
+
+type ResetPasswordResponse struct {
+	Message    string `json:"message"`
+	StatusCode int    `json:"-"`
+}
+
 func CreateUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var reqBody struct {
 		Username string `json:"username"`
@@ -323,6 +334,47 @@ func GeneratePasswordResetCodeHandler(db *sql.DB) http.HandlerFunc {
 		resp := GenerateResetCodeResponse{
 			Message:   "password reset code generated successfully",
 			ResetCode: resetCode,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func ResetPasswordHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			if r.Method != http.MethodPost {
+				http.Error(w, "invalid reguest method", http.StatusMethodNotAllowed)
+				return
+			}
+		}
+
+		var reqBody ResetPasswordRequest
+		err := json.NewDecoder(r.Body).Decode(&reqBody)
+		if err != nil {
+			http.Error(w, "invalid JSON format", http.StatusBadRequest)
+			return
+		}
+
+		if reqBody.Email == "" || reqBody.ResetCode == "" || reqBody.NewPassword == "" {
+			http.Error(w, "all fields (email, reset_code, new_password) are required", http.StatusBadRequest)
+			return
+		}
+
+		err = database.ResetPassword(db, reqBody.Email, reqBody.ResetCode, reqBody.NewPassword)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) || err.Error() == "invalid reset code" {
+				http.Error(w, "invalid reset code", http.StatusBadRequest)
+				return
+			}
+			http.Error(w, "failed to reset password", http.StatusInternalServerError)
+			return
+		}
+
+		resp := ResetPasswordResponse{
+			Message: "password reset successfully",
 		}
 
 		w.Header().Set("Content-Type", "application/json")
