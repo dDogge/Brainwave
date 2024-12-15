@@ -12,7 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func CreateUserTable(db *sql.DB) {
+func CreateUserTable(db *sql.DB) error {
 	query := `CREATE TABLE IF NOT EXISTS users (
     			id INTEGER PRIMARY KEY AUTOINCREMENT,
     			username TEXT UNIQUE NOT NULL,
@@ -26,7 +26,9 @@ func CreateUserTable(db *sql.DB) {
 	_, err := db.Exec(query)
 	if err != nil {
 		log.Fatal("error creating user table: ", err)
+		return err
 	}
+	return nil
 }
 
 func AddUser(db *sql.DB, username, email, password string) error {
