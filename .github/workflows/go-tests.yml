@@ -19,10 +19,13 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.23.3 # Byt ut till din Go-version
+          go-version: 1.23.3 
 
       - name: Install dependencies
         run: go mod tidy
 
-      - name: Run tests
+      - name: Run database tests
         run: go test ./database -v
+
+      - name: Run user handlers tests
+        run: go test ./handlers -v
