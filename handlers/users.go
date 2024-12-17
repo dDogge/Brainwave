@@ -164,7 +164,7 @@ func ChangePasswordHandler(db *sql.DB) http.HandlerFunc {
 		err = database.ChangePassword(db, reqBody.Username, reqBody.CurrentPassword, reqBody.NewPassword)
 		if err != nil {
 			var statusCode int
-			if errors.Is(err, sql.ErrNoRows) || err.Error() == "incorrect current password" {
+			if err.Error() == "user not found" || err.Error() == "incorrect current password" {
 				statusCode = http.StatusUnauthorized
 			} else {
 				statusCode = http.StatusInternalServerError
