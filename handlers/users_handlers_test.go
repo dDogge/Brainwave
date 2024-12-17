@@ -23,6 +23,17 @@ type CheckPasswordResponse struct {
 	Error string `json:"error,omitempty"`
 }
 
+type ChangePasswordRequest struct {
+	Username        string `json:"username"`
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+type ChangePasswordResponse struct {
+	Message string `json:"message"`
+	Error   string `json:"error,omitempty"`
+}
+
 func TestCreateUserHandler(t *testing.T) {
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -148,4 +159,107 @@ func TestCheckPasswordHandler(t *testing.T) {
 			t.Errorf("expected status %d, got %d", http.StatusBadRequest, rr.Code)
 		}
 	})
+}
+
+func TestChangePasswordHandler(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open in-memory database: %v", err)
+	}
+	defer db.Close()
+
+	err = database.CreateUserTable(db)
+	if err != nil {
+		t.Fatalf("failed to create tables: %v", err)
+	}
+
+	username := "testuser"
+	currentPassword := "oldpassword"
+	newPassword := "newpassword"
+	err = database.AddUser(db, username, "testuser@mail.com", currentPassword)
+	if err != nil {
+		t.Fatalf("failed to add test user: %v", err)
+	}
+
+	handler := handlers.ChangePasswordHandler(db)
+
+	tests := []struct {
+		name           string
+		payload        ChangePasswordRequest
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name: "Successful password change",
+			payload: ChangePasswordRequest{
+				Username:        username,
+				CurrentPassword: currentPassword,
+				NewPassword:     newPassword,
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody:   "password changed successfully",
+		},
+		{
+			name: "Incorrect current password",
+			payload: ChangePasswordRequest{
+				Username:        username,
+				CurrentPassword: "wrongpassword",
+				NewPassword:     newPassword,
+			},
+			expectedStatus: http.StatusUnauthorized,
+			expectedBody:   "incorrect current password",
+		},
+		{
+			name: "Empty fields",
+			payload: ChangePasswordRequest{
+				Username:        "",
+				CurrentPassword: "",
+				NewPassword:     "",
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "all fields (username, current_password, new_password) are required",
+		},
+		{
+			name: "Non-existent user",
+			payload: ChangePasswordRequest{
+				Username:        "nonexistent",
+				CurrentPassword: currentPassword,
+				NewPassword:     newPassword,
+			},
+			expectedStatus: http.StatusUnauthorized,
+			expectedBody:   "user not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body, _ := json.Marshal(tt.payload)
+
+			req := httptest.NewRequest(http.MethodPost, "/change-password", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+
+			rr := httptest.NewRecorder()
+
+			handler.ServeHTTP(rr, req)
+
+			if rr.Code != tt.expectedStatus {
+				t.Errorf("expected status %d, got %d", tt.expectedStatus, rr.Code)
+			}
+
+			if tt.expectedStatus == http.StatusOK {
+				var resp ChangePasswordResponse
+				err := json.Unmarshal(rr.Body.Bytes(), &resp)
+				if err != nil {
+					t.Fatalf("failed to unmarshal response: %v", err)
+				}
+				if resp.Message != tt.expectedBody {
+					t.Errorf("expected response message %q, got %q", tt.expectedBody, resp.Message)
+				}
+			} else {
+				if rr.Body.String() != tt.expectedBody+"\n" {
+					t.Errorf("expected response body %q, got %q", tt.expectedBody, rr.Body.String())
+				}
+			}
+		})
+	}
 }
