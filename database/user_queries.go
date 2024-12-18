@@ -117,8 +117,9 @@ func ChangePassword(db *sql.DB, username, currentPassword, newPassword string) e
 func ChangeEmail(db *sql.DB, username, newEmail string) error {
 	var existingUser string
 	err := db.QueryRow("SELECT username FROM users WHERE email = ?", newEmail).Scan(&existingUser)
-	if err != sql.ErrNoRows {
-		log.Printf("error checking for existing email %s: %v", newEmail, err)
+	if err == nil {
+		return errors.New("email is already in use")
+	} else if err != sql.ErrNoRows {
 		return fmt.Errorf("could not check for existing email: %w", err)
 	}
 
