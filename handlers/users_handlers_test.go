@@ -34,6 +34,16 @@ type ChangePasswordResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+type ChangeEmailRequest struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+}
+
+type ChangeEmailResponse struct {
+	Message string `json:"message"`
+	Error   string `json:"error,omitempty"`
+}
+
 func TestCreateUserHandler(t *testing.T) {
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -262,4 +272,136 @@ func TestChangePasswordHandler(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestChangeEmailHandler(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	err = database.CreateUserTable(db)
+	if err != nil {
+		t.Fatalf("failed to create user table: %v", err)
+	}
+
+	err = database.AddUser(db, "testuser", "oldemail@test.com", "password123")
+	if err != nil {
+		t.Fatalf("failed to add user: %v", err)
+	}
+
+	handler := handlers.ChangeEmailHandler(db)
+
+	t.Run("Successfully email change", func(t *testing.T) {
+		reqBody := ChangeEmailRequest{
+			Username: "testuser",
+			Email:    "newemail@test.com",
+		}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/change-email", bytes.NewReader(body))
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected status code 200, got %d", rr.Code)
+		}
+
+		var resp ChangeEmailResponse
+		err = json.Unmarshal(rr.Body.Bytes(), &resp)
+		if err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if resp.Message != "email changed successfully" {
+			t.Errorf("expected success message, got %s", resp.Message)
+		}
+	})
+
+	t.Run("Email already in use", func(t *testing.T) {
+		err = database.AddUser(db, "otheruser", "newemail@test.com", "password123")
+		if err != nil {
+			t.Fatalf("failed to add other user: %v", err)
+		}
+
+		reqBody := ChangeEmailRequest{
+			Username: "testuser",
+			Email:    "newemail@test.com",
+		}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/change-email", bytes.NewReader(body))
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusConflict {
+			t.Errorf("expected status code 409, got %d", rr.Code)
+		}
+
+		expectedMessage := "email is already in use"
+		if rr.Body.String() != expectedMessage+"\n" {
+			t.Errorf("expected response body %s, got %s", expectedMessage, rr.Body.String())
+		}
+	})
+
+	t.Run("Invalid JSON format", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/change-email", bytes.NewReader([]byte(`{"username": "testuser", "email": "missing_quote}`)))
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected status code 400, got %d", rr.Code)
+		}
+
+		expectedMessage := "invalid JSON format"
+		if rr.Body.String() != expectedMessage+"\n" {
+			t.Errorf("expected response body %s, got %s", expectedMessage, rr.Body.String())
+		}
+	})
+
+	t.Run("Missing fields", func(t *testing.T) {
+		reqBody := ChangeEmailRequest{
+			Username: "",
+			Email:    "newemail@test.com",
+		}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/change-email", bytes.NewReader(body))
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected status code 400, got %d", rr.Code)
+		}
+
+		expectedMessage := "all fields (username, email) are required"
+		if rr.Body.String() != expectedMessage+"\n" {
+			t.Errorf("expected response body %s, got %s", expectedMessage, rr.Body.String())
+		}
+	})
+
+	t.Run("Internal server error", func(t *testing.T) {
+		db.Close()
+
+		reqBody := ChangeEmailRequest{
+			Username: "testuser",
+			Email:    "finalemail@test.com",
+		}
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/change-email", bytes.NewReader(body))
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusInternalServerError {
+			t.Errorf("expected status code 500, got %d", rr.Code)
+		}
+
+		expectedMessage := "failed to change email"
+		if rr.Body.String() != expectedMessage+"\n" {
+			t.Errorf("expected response body %s, got %s", expectedMessage, rr.Body.String())
+		}
+	})
 }
