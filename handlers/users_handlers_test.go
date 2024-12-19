@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/dDogge/Brainwave/database"
@@ -402,6 +404,147 @@ func TestChangeEmailHandler(t *testing.T) {
 		expectedMessage := "failed to change email"
 		if rr.Body.String() != expectedMessage+"\n" {
 			t.Errorf("expected response body %s, got %s", expectedMessage, rr.Body.String())
+		}
+	})
+}
+
+func TestChangeUsernameHandler(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create in-memory database: %v", err)
+	}
+	defer db.Close()
+
+	// Setup the database
+	err = database.CreateUserTable(db)
+	if err != nil {
+		t.Fatalf("failed to setup user table: %v", err)
+	}
+
+	handler := http.HandlerFunc(handlers.ChangeUsernameHandler(db))
+
+	// Seed data
+	username := "testuser"
+	newUsername := "newtestuser"
+	existingUsername := "existinguser"
+	email := "testuser@test.com"
+	password := "password123"
+
+	// Add test users
+	err = database.AddUser(db, username, email, password)
+	if err != nil {
+		t.Fatalf("failed to seed user: %v", err)
+	}
+
+	err = database.AddUser(db, existingUsername, "existinguser@test.com", "password456")
+	if err != nil {
+		t.Fatalf("failed to seed user: %v", err)
+	}
+
+	t.Run("Successfully change username", func(t *testing.T) {
+		reqBody := fmt.Sprintf(`{"username":"%s","new_username":"%s"}`, username, newUsername) // Använd newUsername
+		req := httptest.NewRequest(http.MethodPost, "/change-username", strings.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status code %d, got %d", http.StatusOK, w.Code)
+		}
+
+		var resp handlers.ChangeUsernameResponse
+		err := json.NewDecoder(w.Body).Decode(&resp)
+		if err != nil {
+			t.Errorf("failed to decode response: %v", err)
+		}
+
+		if resp.Message != "username changed successfully" {
+			t.Errorf("expected message 'username changed successfully', got '%s'", resp.Message)
+		}
+
+		// Kontrollera att användarnamnet faktiskt ändrats i databasen
+		var updatedUsername string
+		err = db.QueryRow("SELECT username FROM users WHERE username = ?", newUsername).Scan(&updatedUsername)
+		if err != nil {
+			t.Errorf("failed to verify updated username: %v", err)
+		}
+		if updatedUsername != newUsername {
+			t.Errorf("expected username to be updated to '%s', got '%s'", newUsername, updatedUsername)
+		}
+	})
+
+	t.Run("New username already in use", func(t *testing.T) {
+		reqBody := `{"username":"testuser","new_username":"existinguser"}`
+		req := httptest.NewRequest(http.MethodPost, "/change-username", strings.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusConflict {
+			t.Errorf("expected status code %d, got %d", http.StatusConflict, w.Code)
+		}
+
+		expected := "username is already in use"
+		if strings.TrimSpace(w.Body.String()) != expected {
+			t.Errorf("expected response body '%s', got '%s'", expected, w.Body.String())
+		}
+	})
+
+	t.Run("Invalid new username format", func(t *testing.T) {
+		reqBody := `{"username":"testuser","new_username":"!"}`
+		req := httptest.NewRequest(http.MethodPost, "/change-username", strings.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected status code %d, got %d", http.StatusBadRequest, w.Code)
+		}
+
+		expected := "username does not meet requirements"
+		if strings.TrimSpace(w.Body.String()) != expected {
+			t.Errorf("expected response body '%s', got '%s'", expected, w.Body.String())
+		}
+	})
+
+	t.Run("Missing fields", func(t *testing.T) {
+		reqBody := `{"username":"","new_username":""}`
+		req := httptest.NewRequest(http.MethodPost, "/change-username", strings.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected status code %d, got %d", http.StatusBadRequest, w.Code)
+		}
+
+		expected := "all fields (username, new_username) are required"
+		if strings.TrimSpace(w.Body.String()) != expected {
+			t.Errorf("expected response body '%s', got '%s'", expected, w.Body.String())
+		}
+	})
+
+	t.Run("Internal server error", func(t *testing.T) {
+		db.Close() // Simulate a database failure
+
+		reqBody := `{"username":"testuser","new_username":"newtestuser"}`
+		req := httptest.NewRequest(http.MethodPost, "/change-username", strings.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusInternalServerError {
+			t.Errorf("expected status code %d, got %d", http.StatusInternalServerError, w.Code)
+		}
+
+		expected := "failed to change username"
+		if !strings.Contains(w.Body.String(), expected) {
+			t.Errorf("expected response body to contain '%s', got '%s'", expected, w.Body.String())
 		}
 	})
 }
