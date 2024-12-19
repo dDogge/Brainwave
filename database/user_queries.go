@@ -141,12 +141,12 @@ func ChangeEmail(db *sql.DB, username, newEmail string) error {
 func ChangeUsername(db *sql.DB, username, newUsername string) error {
 	var existingUser string
 	err := db.QueryRow("SELECT username FROM users WHERE username = ?", newUsername).Scan(&existingUser)
-	if err != sql.ErrNoRows {
+	if err != nil && err != sql.ErrNoRows {
 		log.Printf("error checking for existing username %s: %v", newUsername, err)
 		return fmt.Errorf("could not check for existing username: %w", err)
 	}
 
-	if err == nil {
+	if err == nil { // Om inget fel uppstod, betyder det att användarnamnet finns
 		log.Printf("username already in use: %s", newUsername)
 		return errors.New("username is already in use")
 	}
