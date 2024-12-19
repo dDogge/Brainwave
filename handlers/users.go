@@ -244,6 +244,9 @@ func ChangeUsernameHandler(db *sql.DB) http.HandlerFunc {
 			if err.Error() == "username is already in use" {
 				http.Error(w, err.Error(), http.StatusConflict)
 				return
+			} else if err.Error() == "username does not meet requirements" {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
 			}
 			http.Error(w, "failed to change username", http.StatusInternalServerError)
 			return
