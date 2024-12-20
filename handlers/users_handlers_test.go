@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -545,6 +546,137 @@ func TestChangeUsernameHandler(t *testing.T) {
 		expected := "failed to change username"
 		if !strings.Contains(w.Body.String(), expected) {
 			t.Errorf("expected response body to contain '%s', got '%s'", expected, w.Body.String())
+		}
+	})
+}
+
+func TestRemoveUserHandler(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create in-memory database: %v", err)
+	}
+	defer db.Close()
+
+	err = database.CreateUserTable(db)
+	if err != nil {
+		t.Fatalf("failed to setup user table: %v", err)
+	}
+
+	err = database.CreateTopicTable(db)
+	if err != nil {
+		t.Fatalf("failed to setup topics table: %v", err)
+	}
+
+	err = database.CreateMessageTable(db)
+	if err != nil {
+		t.Fatalf("failed to setup messages table: %v", err)
+	}
+
+	username := "testuser"
+	email := "testuser@test.com"
+	password := "password123"
+
+	err = database.AddUser(db, username, email, password)
+	if err != nil {
+		t.Fatalf("failed to seed user: %v", err)
+	}
+
+	handler := handlers.RemoveUserHandler(db)
+
+	t.Run("Successfully_remove_user", func(t *testing.T) {
+		reqBody := `{"username":"testuser"}`
+		req := httptest.NewRequest(http.MethodDelete, "/remove-user", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("expected status %d, got %d", http.StatusOK, resp.StatusCode)
+		}
+
+		var responseBody map[string]string
+		err := json.NewDecoder(resp.Body).Decode(&responseBody)
+		if err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if responseBody["message"] != "user removed successfully" {
+			t.Errorf("expected message 'user removed successfully', got %s", responseBody["message"])
+		}
+	})
+
+	t.Run("User_not_found", func(t *testing.T) {
+		reqBody := `{"username":"nonexistent"}`
+		req := httptest.NewRequest(http.MethodDelete, "/remove-user", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNotFound {
+			t.Errorf("expected status %d, got %d", http.StatusNotFound, resp.StatusCode)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("failed to read response body: %v", err)
+		}
+
+		if string(body) != "user not found\n" {
+			t.Errorf("expected response 'user not found', got %s", string(body))
+		}
+	})
+
+	t.Run("Invalid_JSON", func(t *testing.T) {
+		reqBody := `{"username":}`
+		req := httptest.NewRequest(http.MethodDelete, "/remove-user", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("failed to read response body: %v", err)
+		}
+
+		if string(body) != "invalid JSON format\n" {
+			t.Errorf("expected response 'invalid JSON format', got %s", string(body))
+		}
+	})
+
+	t.Run("Missing_fields", func(t *testing.T) {
+		reqBody := `{}`
+		req := httptest.NewRequest(http.MethodDelete, "/remove-user", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("failed to read response body: %v", err)
+		}
+
+		if string(body) != "all fields (username) are required\n" {
+			t.Errorf("expected response 'all fields (username) are required', got %s", string(body))
 		}
 	})
 }
