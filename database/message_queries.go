@@ -7,7 +7,7 @@ import (
 	"log"
 )
 
-func CreateMessageTable(db *sql.DB) {
+func CreateMessageTable(db *sql.DB) error {
 	query := `CREATE TABLE IF NOT EXISTS messages (
     			id INTEGER PRIMARY KEY AUTOINCREMENT,
     			message TEXT,
@@ -23,7 +23,9 @@ func CreateMessageTable(db *sql.DB) {
 	_, err := db.Exec(query)
 	if err != nil {
 		log.Fatal("error creating message table: ", err)
+		return err
 	}
+	return nil
 }
 
 func AddMessage(db *sql.DB, topic, message, username string) error {

@@ -173,7 +173,7 @@ func RemoveUser(db *sql.DB, username string) error {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Printf("user not found: %s", username)
-			return fmt.Errorf("user not found: %s", username)
+			return fmt.Errorf("user not found")
 		}
 		log.Printf("error fetching user ID: %v", err)
 		return fmt.Errorf("could not fetch user ID: %w", err)

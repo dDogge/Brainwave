@@ -7,7 +7,7 @@ import (
 	"log"
 )
 
-func CreateTopicTable(db *sql.DB) {
+func CreateTopicTable(db *sql.DB) error {
 	query := `CREATE TABLE IF NOT EXISTS topics (
     			id INTEGER PRIMARY KEY AUTOINCREMENT,
     			title TEXT UNIQUE NOT NULL,
@@ -20,7 +20,9 @@ func CreateTopicTable(db *sql.DB) {
 	_, err := db.Exec(query)
 	if err != nil {
 		log.Fatal("error creating topic table: ", err)
+		return err
 	}
+	return nil
 }
 
 func AddTopic(db *sql.DB, title, username string) error {
