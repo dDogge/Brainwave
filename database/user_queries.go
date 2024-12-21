@@ -8,6 +8,7 @@ import (
 	"math/rand/v2"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -32,6 +33,8 @@ func CreateUserTable(db *sql.DB) error {
 }
 
 func AddUser(db *sql.DB, username, email, password string) error {
+	const ErrUserExists = "username or email already exists"
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("error hashing password: %v", err)
@@ -49,7 +52,7 @@ func AddUser(db *sql.DB, username, email, password string) error {
 	if err != nil {
 		if isUniqueConstraintError(err) {
 			log.Printf("unique constraint violation for username or email: %v", err)
-			return errors.New("username or email already exists")
+			return errors.New(ErrUserExists)
 		}
 		log.Printf("error executing statement: %v", err)
 		return fmt.Errorf("could not execute statement: %w", err)
@@ -209,7 +212,7 @@ func RemoveUser(db *sql.DB, username string) error {
 }
 
 func isUniqueConstraintError(err error) bool {
-	return err != nil && (err.Error() == "UNIQUE constraint failed: users.username" || err.Error() == "UNIQUE constraint failed: users.email")
+	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed")
 }
 
 func GeneratePasswordResetCode(db *sql.DB, email string) (string, error) {
