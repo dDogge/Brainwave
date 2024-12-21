@@ -680,3 +680,128 @@ func TestRemoveUserHandler(t *testing.T) {
 		}
 	})
 }
+
+func TestGeneratePasswordResetCodeHandler(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create in-memory database: %v", err)
+	}
+	defer db.Close()
+
+	err = database.CreateUserTable(db)
+	if err != nil {
+		t.Fatalf("failed to setup user table: %v", err)
+	}
+
+	email := "testuser@test.com"
+	username := "testuser"
+	password := "password123"
+
+	err = database.AddUser(db, username, email, password)
+	if err != nil {
+		t.Fatalf("failed to seed user: %v", err)
+	}
+
+	handler := handlers.GeneratePasswordResetCodeHandler(db)
+
+	t.Run("Successfully_generate_reset_code", func(t *testing.T) {
+		reqBody := `{"email":"testuser@test.com"}`
+		req := httptest.NewRequest(http.MethodPost, "/generate-reset-code", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("expected status %d, got %d", http.StatusOK, resp.StatusCode)
+		}
+
+		var responseBody map[string]string
+		err := json.NewDecoder(resp.Body).Decode(&responseBody)
+		if err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if responseBody["message"] != "password reset code generated successfully" {
+			t.Errorf("expected message 'password reset code generated successfully', got %s", responseBody["message"])
+		}
+
+		if responseBody["reset_code"] == "" {
+			t.Errorf("expected a reset code, got empty string")
+		}
+	})
+
+	t.Run("Email_not_found", func(t *testing.T) {
+		reqBody := `{"email":"nonexistent@test.com"}`
+		req := httptest.NewRequest(http.MethodPost, "/generate-reset-code", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNotFound {
+			t.Errorf("expected status %d, got %d", http.StatusNotFound, resp.StatusCode)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("failed to read response body: %v", err)
+		}
+
+		if string(body) != "email not found\n" {
+			t.Errorf("expected response 'email not found', got %s", string(body))
+		}
+	})
+
+	t.Run("Invalid_JSON", func(t *testing.T) {
+		reqBody := `{"email":}`
+		req := httptest.NewRequest(http.MethodPost, "/generate-reset-code", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("failed to read response body: %v", err)
+		}
+
+		if string(body) != "invalid JSON format\n" {
+			t.Errorf("expected response 'invalid JSON format', got %s", string(body))
+		}
+	})
+
+	t.Run("Missing_email_field", func(t *testing.T) {
+		reqBody := `{}`
+		req := httptest.NewRequest(http.MethodPost, "/generate-reset-code", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("failed to read response body: %v", err)
+		}
+
+		if string(body) != "email field is required\n" {
+			t.Errorf("expected response 'email field is required', got %s", string(body))
+		}
+	})
+}
