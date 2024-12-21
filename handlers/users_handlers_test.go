@@ -100,6 +100,60 @@ func TestCreateUserHandler(t *testing.T) {
 	if username != "testuser" {
 		t.Errorf("expected username 'testuser', got '%s'", username)
 	}
+
+	t.Run("Invalid_JSON", func(t *testing.T) {
+		reqBody := `{"username":}` // ogiltig JSON
+		req := httptest.NewRequest(http.MethodPost, "/create-user", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("failed to read response body: %v", err)
+		}
+
+		if string(body) != "invalid input format\n" {
+			t.Errorf("expected response 'invalid input format', got '%s'", string(body))
+		}
+	})
+
+	t.Run("Username_Already_Exists", func(t *testing.T) {
+		payload := map[string]string{
+			"username": "testuser", // samma som tidigare
+			"email":    "duplicate@test.com",
+			"password": "password123",
+		}
+		payloadBytes, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPost, "/create-user", bytes.NewReader(payloadBytes))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusConflict {
+			t.Errorf("expected status %d, got %d", http.StatusConflict, resp.StatusCode)
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("failed to read response body: %v", err)
+		}
+
+		if string(body) != "username or email already exists\n" {
+			t.Errorf("expected response 'username or email already exists', got '%s'", string(body))
+		}
+	})
 }
 
 func TestCheckPasswordHandler(t *testing.T) {

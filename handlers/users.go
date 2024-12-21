@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/dDogge/Brainwave/database"
@@ -72,6 +73,8 @@ type ResetPasswordResponse struct {
 }
 
 func CreateUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	const ErrUserExists = "username or email already exists"
+
 	var reqBody struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
@@ -91,11 +94,12 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	err = database.AddUser(db, reqBody.Username, reqBody.Email, reqBody.Password)
 	if err != nil {
-		if err.Error() == "username or email already exists" {
-			http.Error(w, "username or email already exists", http.StatusConflict)
-		} else {
-			http.Error(w, "internal server error: "+err.Error(), http.StatusInternalServerError)
+		if err.Error() == ErrUserExists {
+			http.Error(w, ErrUserExists, http.StatusConflict)
+			return
 		}
+		log.Printf("internal server error: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
