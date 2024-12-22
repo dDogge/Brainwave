@@ -203,8 +203,44 @@ func TestCheckPasswordHandler(t *testing.T) {
 		reqBody := CheckPasswordRequest{Username: username, Password: "wrongpassword"}
 		rr := makeRequest(reqBody)
 
-		if rr.Code != http.StatusOK {
-			t.Errorf("expected status %d, got %d", http.StatusOK, rr.Code)
+		if rr.Code != http.StatusUnauthorized {
+			t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rr.Code)
+		}
+
+		var resp CheckPasswordResponse
+		err := json.Unmarshal(rr.Body.Bytes(), &resp)
+		if err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if resp.Valid {
+			t.Errorf("expected invalid password, got valid")
+		}
+		if resp.Error != "invalid username or password" {
+			t.Errorf("expected error message 'invalid username or password', got '%s'", resp.Error)
+		}
+	})
+
+	t.Run("MissingFields", func(t *testing.T) {
+		reqBody := CheckPasswordRequest{Username: ""}
+		rr := makeRequest(reqBody)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, rr.Code)
+		}
+
+		body := rr.Body.String()
+		if body != "both username and password are required\n" {
+			t.Errorf("expected response 'both username and password are required', got %s", body)
+		}
+	})
+
+	t.Run("NonExistentUser", func(t *testing.T) {
+		reqBody := CheckPasswordRequest{Username: "nonexistent", Password: password}
+		rr := makeRequest(reqBody)
+
+		if rr.Code != http.StatusUnauthorized {
+			t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rr.Code)
 		}
 
 		var resp CheckPasswordResponse
@@ -224,6 +260,26 @@ func TestCheckPasswordHandler(t *testing.T) {
 
 		if rr.Code != http.StatusBadRequest {
 			t.Errorf("expected status %d, got %d", http.StatusBadRequest, rr.Code)
+		}
+
+		body := rr.Body.String()
+		if body != "invalid JSON format\n" {
+			t.Errorf("expected response 'invalid JSON format', got %s", body)
+		}
+	})
+
+	t.Run("InvalidMethod", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, "/checkpassword", nil)
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusMethodNotAllowed {
+			t.Errorf("expected status %d, got %d", http.StatusMethodNotAllowed, rr.Code)
+		}
+
+		body := rr.Body.String()
+		if body != "invalid request method\n" {
+			t.Errorf("expected response 'invalid request method', got %s", body)
 		}
 	})
 }

@@ -134,13 +134,20 @@ func CheckPasswordHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		resp := CheckPasswordResponse{
-			Valid: valid,
-		}
 		if !valid {
-			resp.Error = "invalid username or password"
+			resp := CheckPasswordResponse{
+				Valid: false,
+				Error: "invalid username or password",
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(resp)
+			return
 		}
 
+		resp := CheckPasswordResponse{
+			Valid: true,
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
 	}
