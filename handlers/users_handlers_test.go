@@ -293,7 +293,7 @@ func TestChangePasswordHandler(t *testing.T) {
 
 	err = database.CreateUserTable(db)
 	if err != nil {
-		t.Fatalf("failed to create tables: %v", err)
+		t.Fatalf("failed to create user table: %v", err)
 	}
 
 	username := "testuser"
@@ -305,6 +305,15 @@ func TestChangePasswordHandler(t *testing.T) {
 	}
 
 	handler := handlers.ChangePasswordHandler(db)
+
+	makeRequest := func(payload ChangePasswordRequest) *httptest.ResponseRecorder {
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPost, "/change-password", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		return rr
+	}
 
 	tests := []struct {
 		name           string
@@ -352,35 +361,53 @@ func TestChangePasswordHandler(t *testing.T) {
 			expectedStatus: http.StatusUnauthorized,
 			expectedBody:   "user not found",
 		},
+		{
+			name:           "Invalid JSON",
+			payload:        ChangePasswordRequest{},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "invalid JSON format",
+		},
+		{
+			name:           "Invalid request method",
+			payload:        ChangePasswordRequest{},
+			expectedStatus: http.StatusMethodNotAllowed,
+			expectedBody:   "invalid request method",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			body, _ := json.Marshal(tt.payload)
+			var rr *httptest.ResponseRecorder
 
-			req := httptest.NewRequest(http.MethodPost, "/change-password", bytes.NewReader(body))
-			req.Header.Set("Content-Type", "application/json")
-
-			rr := httptest.NewRecorder()
-
-			handler.ServeHTTP(rr, req)
+			if tt.name == "Invalid JSON" {
+				req := httptest.NewRequest(http.MethodPost, "/change-password", bytes.NewReader([]byte("invalid-json")))
+				req.Header.Set("Content-Type", "application/json")
+				rr = httptest.NewRecorder()
+				handler.ServeHTTP(rr, req)
+			} else if tt.name == "Invalid request method" {
+				req := httptest.NewRequest(http.MethodGet, "/change-password", nil)
+				rr = httptest.NewRecorder()
+				handler.ServeHTTP(rr, req)
+			} else {
+				rr = makeRequest(tt.payload)
+			}
 
 			if rr.Code != tt.expectedStatus {
-				t.Errorf("expected status %d, got %d", tt.expectedStatus, rr.Code)
+				t.Errorf("[%s] expected status %d, got %d", tt.name, tt.expectedStatus, rr.Code)
 			}
 
 			if tt.expectedStatus == http.StatusOK {
 				var resp ChangePasswordResponse
 				err := json.Unmarshal(rr.Body.Bytes(), &resp)
 				if err != nil {
-					t.Fatalf("failed to unmarshal response: %v", err)
+					t.Fatalf("[%s] failed to unmarshal response: %v", tt.name, err)
 				}
 				if resp.Message != tt.expectedBody {
-					t.Errorf("expected response message %q, got %q", tt.expectedBody, resp.Message)
+					t.Errorf("[%s] expected message %q, got %q", tt.name, tt.expectedBody, resp.Message)
 				}
 			} else {
 				if rr.Body.String() != tt.expectedBody+"\n" {
-					t.Errorf("expected response body %q, got %q", tt.expectedBody, rr.Body.String())
+					t.Errorf("[%s] expected response body %q, got %q", tt.name, tt.expectedBody, rr.Body.String())
 				}
 			}
 		})
