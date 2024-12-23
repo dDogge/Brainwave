@@ -360,7 +360,7 @@ func ResetPasswordHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			if r.Method != http.MethodPost {
-				http.Error(w, "invalid reguest method", http.StatusMethodNotAllowed)
+				http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
 				return
 			}
 		}

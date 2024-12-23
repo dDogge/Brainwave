@@ -47,6 +47,17 @@ type ChangeEmailResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+type ResetPasswordRequest struct {
+	Email       string `json:"email"`
+	ResetCode   string `json:"reset_code"`
+	NewPassword string `json:"new_password"`
+}
+
+type ResetPasswordResponse struct {
+	Message    string `json:"message"`
+	StatusCode int    `json:"-"`
+}
+
 func TestCreateUserHandler(t *testing.T) {
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -939,6 +950,161 @@ func TestGeneratePasswordResetCodeHandler(t *testing.T) {
 
 		if string(body) != "email field is required\n" {
 			t.Errorf("expected response 'email field is required', got %s", string(body))
+		}
+	})
+}
+
+func TestResetPasswordHandler(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open in-memory database: %v", err)
+	}
+	defer db.Close()
+
+	err = database.CreateUserTable(db)
+	if err != nil {
+		t.Fatalf("failed to create user table: %v", err)
+	}
+
+	username := "testuser"
+	email := "testuser@mail.com"
+	password := "oldpassword"
+	resetCode := "123456"
+	err = database.AddUser(db, username, email, password)
+	if err != nil {
+		t.Fatalf("failed to add test user: %v", err)
+	}
+
+	_, err = db.Exec("UPDATE users SET reset_code = ? WHERE email = ?", resetCode, email)
+	if err != nil {
+		t.Fatalf("failed to update reset code for test user: %v", err)
+	}
+
+	handler := handlers.ResetPasswordHandler(db)
+
+	t.Run("InvalidJSON", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPost, "/reset-password", bytes.NewBuffer([]byte("invalid-json")))
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, rr.Code)
+		}
+
+		body := rr.Body.String()
+		if body != "invalid JSON format\n" {
+			t.Errorf("expected response 'invalid JSON format', got %s", body)
+		}
+	})
+
+	t.Run("InvalidMethod", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, "/reset-password", nil)
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusMethodNotAllowed {
+			t.Errorf("expected status %d, got %d", http.StatusMethodNotAllowed, rr.Code)
+		}
+
+		body := rr.Body.String()
+		if body != "invalid request method\n" {
+			t.Errorf("expected response 'invalid request method', got %s", body)
+		}
+	})
+
+	t.Run("SuccessfulPasswordReset", func(t *testing.T) {
+		reqBody := ResetPasswordRequest{
+			Email:       email,
+			ResetCode:   resetCode,
+			NewPassword: "newpassword",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest(http.MethodPost, "/reset-password", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected status %d, got %d", http.StatusOK, rr.Code)
+		}
+
+		var resp ResetPasswordResponse
+		err := json.Unmarshal(rr.Body.Bytes(), &resp)
+		if err != nil {
+			t.Fatalf("failed to unmarshal response: %v", err)
+		}
+		if resp.Message != "password reset successfully" {
+			t.Errorf("expected message 'password reset successfully', got '%s'", resp.Message)
+		}
+	})
+
+	t.Run("InvalidResetCode", func(t *testing.T) {
+		reqBody := ResetPasswordRequest{
+			Email:       email,
+			ResetCode:   "wrongcode",
+			NewPassword: "newpassword",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest(http.MethodPost, "/reset-password", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, rr.Code)
+		}
+
+		bodyStr := rr.Body.String()
+		if bodyStr != "invalid reset code\n" {
+			t.Errorf("expected response 'invalid reset code', got %s", bodyStr)
+		}
+	})
+
+	t.Run("MissingFields", func(t *testing.T) {
+		reqBody := ResetPasswordRequest{}
+		body, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest(http.MethodPost, "/reset-password", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, rr.Code)
+		}
+
+		bodyStr := rr.Body.String()
+		if bodyStr != "all fields (email, reset_code, new_password) are required\n" {
+			t.Errorf("expected response 'all fields (email, reset_code, new_password) are required', got %s", bodyStr)
+		}
+	})
+
+	t.Run("NonExistentUser", func(t *testing.T) {
+		reqBody := ResetPasswordRequest{
+			Email:       "nonexistent@mail.com",
+			ResetCode:   resetCode,
+			NewPassword: "newpassword",
+		}
+		body, _ := json.Marshal(reqBody)
+
+		req := httptest.NewRequest(http.MethodPost, "/reset-password", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, rr.Code)
+		}
+
+		bodyStr := rr.Body.String()
+		if bodyStr != "invalid reset code\n" {
+			t.Errorf("expected response 'invalid reset code', got %s", bodyStr)
 		}
 	})
 }
