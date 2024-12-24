@@ -1108,3 +1108,90 @@ func TestResetPasswordHandler(t *testing.T) {
 		}
 	})
 }
+
+func TestGetAllUsersHandler(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open in-memory database: %v", err)
+	}
+	defer db.Close()
+
+	err = database.CreateUserTable(db)
+	if err != nil {
+		t.Fatalf("failed to create user table: %v", err)
+	}
+
+	username := "testuser"
+	email := "testuser@mail.com"
+	password := "password123"
+	err = database.AddUser(db, username, email, password)
+	if err != nil {
+		t.Fatalf("failed to add test user: %v", err)
+	}
+
+	handler := handlers.GetAllUsersHandler(db)
+
+	t.Run("SuccessfullyFetchAllUsers", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/get-users", nil)
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected status %d, got %d", http.StatusOK, rr.Code)
+		}
+
+		var users []map[string]interface{}
+		err := json.Unmarshal(rr.Body.Bytes(), &users)
+		if err != nil {
+			t.Fatalf("failed to unmarshal response: %v", err)
+		}
+
+		if len(users) != 1 {
+			t.Errorf("expected 1 user, got %d", len(users))
+		}
+
+		if users[0]["username"] != username {
+			t.Errorf("expected username '%s', got '%s'", username, users[0]["username"])
+		}
+	})
+
+	t.Run("InvalidRequestMethod", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/get-users", nil)
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusMethodNotAllowed {
+			t.Errorf("expected status %d, got %d", http.StatusMethodNotAllowed, rr.Code)
+		}
+
+		body := rr.Body.String()
+		if body != "invalid request method\n" {
+			t.Errorf("expected response 'invalid request method', got %s", body)
+		}
+	})
+
+	t.Run("FailedToFetchUsers", func(t *testing.T) {
+		db.Close()
+
+		req := httptest.NewRequest(http.MethodGet, "/get-users", nil)
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusInternalServerError {
+			t.Errorf("expected status %d, got %d", http.StatusInternalServerError, rr.Code)
+		}
+
+		body := rr.Body.String()
+		if body != "failed to fetch users\n" {
+			t.Errorf("expected response 'failed to fetch users', got %s", body)
+		}
+
+		db, err = sql.Open("sqlite", ":memory:")
+		if err != nil {
+			t.Fatalf("failed to open in-memory database after closing: %v", err)
+		}
+	})
+}
