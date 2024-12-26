@@ -53,3 +53,47 @@ func AddTopicHandler(db *sql.DB) http.HandlerFunc {
 		json.NewEncoder(w).Encode(resp)
 	}
 }
+
+func RemoveTopicHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var reqBody struct {
+			Title string `json:"title"`
+		}
+
+		err := json.NewDecoder(r.Body).Decode(&reqBody)
+		if err != nil {
+			http.Error(w, "invalid JSON format", http.StatusBadRequest)
+			return
+		}
+
+		if reqBody.Title == "" {
+			http.Error(w, "title field is required", http.StatusBadRequest)
+			return
+		}
+
+		err = database.RemoveTopic(db, reqBody.Title)
+		if err != nil {
+			if err.Error() == "no topic found with title" {
+				http.Error(w, "topic not found", http.StatusNotFound)
+			} else {
+				http.Error(w, "failed to remove topic", http.StatusInternalServerError)
+			}
+			return
+		}
+
+		resp := struct {
+			Message string `json:"message"`
+		}{
+			Message: "topic removed successfully",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}
+}
