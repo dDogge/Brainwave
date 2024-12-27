@@ -136,3 +136,42 @@ func UpVoteTopicHandler(db *sql.DB) http.HandlerFunc {
 		json.NewEncoder(w).Encode(resp)
 	}
 }
+
+func DownVoteTopicHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var reqBody struct {
+			Title    string `json:"title"`
+			Username string `json:"username"`
+		}
+
+		err := json.NewDecoder(r.Body).Decode(&reqBody)
+		if err != nil {
+			http.Error(w, "invalid JSON format", http.StatusBadRequest)
+			return
+		}
+
+		if reqBody.Title == "" || reqBody.Username == "" {
+			http.Error(w, "all fields (title, username) are required", http.StatusBadRequest)
+			return
+		}
+
+		err = database.DownVoteTopic(db, reqBody.Title, reqBody.Username)
+		if err != nil {
+			http.Error(w, "failed to downvote topic", http.StatusInternalServerError)
+			return
+		}
+
+		resp := map[string]string{
+			"message": "downvote added successfully"
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}
+}
