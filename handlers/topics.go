@@ -175,3 +175,25 @@ func DownVoteTopicHandler(db *sql.DB) http.HandlerFunc {
 		json.NewEncoder(w).Encode(resp)
 	}
 }
+
+func GetAllTopicsHandler(db *sql.DB) http.HandlerFunc {
+	return func (w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		topics, err := database.GetAllTopics(db)
+		if err != nil {
+			http.Error(w, "failed to fetch topics", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(topics); err != nil {
+			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+			return
+		}
+	}
+}
