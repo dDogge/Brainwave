@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/dDogge/Brainwave/database"
@@ -167,7 +168,7 @@ func DownVoteTopicHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		resp := map[string]string{
-			"message": "downvote added successfully"
+			"message": "downvote added successfully",
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -177,7 +178,7 @@ func DownVoteTopicHandler(db *sql.DB) http.HandlerFunc {
 }
 
 func GetAllTopicsHandler(db *sql.DB) http.HandlerFunc {
-	return func (w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
 			return
@@ -192,6 +193,38 @@ func GetAllTopicsHandler(db *sql.DB) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(w).Encode(topics); err != nil {
+			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func GetTopicByTitleHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		title := r.URL.Query().Get("title")
+		if title == "" {
+			http.Error(w, "topic title is required", http.StatusBadRequest)
+			return
+		}
+
+		topic, err := database.GetTopicByTitle(db, title)
+		if err != nil {
+			if err.Error() == fmt.Sprintf("topic with title '%s' not found", title) {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
+			http.Error(w, "failed to fetch topic", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(topic); err != nil {
 			http.Error(w, "failed to encode response", http.StatusInternalServerError)
 			return
 		}
