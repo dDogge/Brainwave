@@ -230,3 +230,28 @@ func GetTopicByTitleHandler(db *sql.DB) http.HandlerFunc {
 		}
 	}
 }
+
+func CountTopicsHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		count, err := database.CountTopics(db)
+		if err != nil {
+			http.Error(w, "failed to count topics", http.StatusInternalServerError)
+			return
+		}
+
+		resp := map[string]int{
+			"total_topics": count,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+			return
+		}
+	}
+}
