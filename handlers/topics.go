@@ -13,6 +13,7 @@ func AddTopicHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
+			return
 		}
 
 		var reqBody struct {

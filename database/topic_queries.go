@@ -36,6 +36,15 @@ func AddTopic(db *sql.DB, title, username string) error {
 		return fmt.Errorf("could not fetch creator_id: %w", err)
 	}
 
+	var existingTitle string
+	err = db.QueryRow("SELECT title FROM topics WHERE title = ?", title).Scan(&existingTitle)
+	if err == nil {
+		return errors.New("topic title already exists")
+	} else if err != sql.ErrNoRows {
+		log.Printf("error checking if topic exists: %v", err)
+		return fmt.Errorf("could not check if topic exists: %w", err)
+	}
+
 	stmt, err := db.Prepare("INSERT INTO topics (title, creator_id) VALUES (?, ?)")
 	if err != nil {
 		log.Printf("error preparing statement: %v", err)
@@ -45,9 +54,6 @@ func AddTopic(db *sql.DB, title, username string) error {
 
 	_, err = stmt.Exec(title, creatorID)
 	if err != nil {
-		if isUniqueConstraintError(err) {
-			return errors.New("topic title already exists")
-		}
 		log.Printf("error executing statement: %v", err)
 		return fmt.Errorf("could not execute statement: %w", err)
 	}
