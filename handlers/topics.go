@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/dDogge/Brainwave/database"
 )
@@ -80,7 +81,7 @@ func RemoveTopicHandler(db *sql.DB) http.HandlerFunc {
 
 		err = database.RemoveTopic(db, reqBody.Title)
 		if err != nil {
-			if err.Error() == "no topic found with title" {
+			if strings.Contains(err.Error(), "no topic found with title") {
 				http.Error(w, "topic not found", http.StatusNotFound)
 			} else {
 				http.Error(w, "failed to remove topic", http.StatusInternalServerError)
