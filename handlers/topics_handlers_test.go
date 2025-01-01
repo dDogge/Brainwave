@@ -270,3 +270,130 @@ func TestRemoveTopicHandler(t *testing.T) {
 		}
 	})
 }
+
+func TestUpVoteTopicHandler(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create in-memory database: %v", err)
+	}
+	defer db.Close()
+
+	err = database.CreateUserTable(db)
+	if err != nil {
+		t.Fatalf("failed to create user table: %v", err)
+	}
+
+	err = database.CreateTopicTable(db)
+	if err != nil {
+		t.Fatalf("failed to create topic table: %v", err)
+	}
+
+	username := "testuser"
+	email := "testuser@example.com"
+	password := "password123"
+	err = database.AddUser(db, username, email, password)
+	if err != nil {
+		t.Fatalf("failed to add test user: %v", err)
+	}
+
+	topicTitle := "Test Topic"
+	err = database.AddTopic(db, topicTitle, username)
+	if err != nil {
+		t.Fatalf("failed to add test topic: %v", err)
+	}
+
+	handler := handlers.UpVoteTopicHandler(db)
+
+	t.Run("Successful Upvote", func(t *testing.T) {
+		reqBody := `{"title":"Test Topic", "username":"testuser"}`
+		req := httptest.NewRequest(http.MethodPost, "/upvote-topic", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+		}
+
+		var resp map[string]string
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		expectedMessage := "upvote added successfully"
+		if resp["message"] != expectedMessage {
+			t.Errorf("expected response message '%s', got '%s'", expectedMessage, resp["message"])
+		}
+	})
+
+	t.Run("Topic Not Found", func(t *testing.T) {
+		reqBody := `{"title":"Nonexistent Topic", "username":"testuser"}`
+		req := httptest.NewRequest(http.MethodPost, "/upvote-topic", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("expected status %d, got %d", http.StatusNotFound, w.Code)
+		}
+
+		body := w.Body.String()
+		expectedBody := "failed to upvote topic\n"
+		if body != expectedBody {
+			t.Errorf("expected response '%s', got '%s'", expectedBody, body)
+		}
+	})
+
+	t.Run("Missing Fields", func(t *testing.T) {
+		reqBody := `{}`
+		req := httptest.NewRequest(http.MethodPost, "/upvote-topic", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+		}
+
+		body := w.Body.String()
+		expectedBody := "all fields (title, username) are required\n"
+		if body != expectedBody {
+			t.Errorf("expected response '%s', got '%s'", expectedBody, body)
+		}
+	})
+
+	t.Run("Invalid JSON", func(t *testing.T) {
+		reqBody := `{"title":"Test Topic", "username"}`
+		req := httptest.NewRequest(http.MethodPost, "/upvote-topic", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+		}
+
+		body := w.Body.String()
+		expectedBody := "invalid JSON format\n"
+		if body != expectedBody {
+			t.Errorf("expected response '%s', got '%s'", expectedBody, body)
+		}
+	})
+
+	t.Run("Invalid Method", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/upvote-topic", nil)
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("expected status %d, got %d", http.StatusMethodNotAllowed, w.Code)
+		}
+
+		body := w.Body.String()
+		expectedBody := "invalid request method\n"
+		if body != expectedBody {
+			t.Errorf("expected response '%s', got '%s'", expectedBody, body)
+		}
+	})
+}
