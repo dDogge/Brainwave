@@ -124,6 +124,16 @@ func UpVoteTopicHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		_, err = database.GetTopicByTitle(db, reqBody.Title)
+		if err != nil {
+			if err.Error() == "topic with title '"+reqBody.Title+"' not found" {
+				http.Error(w, "failed to upvote topic", http.StatusNotFound)
+				return
+			}
+			http.Error(w, "failed to upvote topic", http.StatusInternalServerError)
+			return
+		}
+
 		err = database.UpVoteTopic(db, reqBody.Title, reqBody.Username)
 		if err != nil {
 			http.Error(w, "failed to upvote topic", http.StatusInternalServerError)
