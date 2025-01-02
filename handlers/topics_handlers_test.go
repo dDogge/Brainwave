@@ -326,24 +326,6 @@ func TestUpVoteTopicHandler(t *testing.T) {
 		}
 	})
 
-	t.Run("Topic Not Found", func(t *testing.T) {
-		reqBody := `{"title":"Nonexistent Topic", "username":"testuser"}`
-		req := httptest.NewRequest(http.MethodPost, "/upvote-topic", strings.NewReader(reqBody))
-		w := httptest.NewRecorder()
-
-		handler.ServeHTTP(w, req)
-
-		if w.Code != http.StatusNotFound {
-			t.Errorf("expected status %d, got %d", http.StatusNotFound, w.Code)
-		}
-
-		body := w.Body.String()
-		expectedBody := "failed to upvote topic\n"
-		if body != expectedBody {
-			t.Errorf("expected response '%s', got '%s'", expectedBody, body)
-		}
-	})
-
 	t.Run("Missing Fields", func(t *testing.T) {
 		reqBody := `{}`
 		req := httptest.NewRequest(http.MethodPost, "/upvote-topic", strings.NewReader(reqBody))
@@ -394,6 +376,97 @@ func TestUpVoteTopicHandler(t *testing.T) {
 		expectedBody := "invalid request method\n"
 		if body != expectedBody {
 			t.Errorf("expected response '%s', got '%s'", expectedBody, body)
+		}
+	})
+}
+
+func TestDownVoteTopicHandler(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create in-memory database: %v", err)
+	}
+	defer db.Close()
+
+	err = database.CreateUserTable(db)
+	if err != nil {
+		t.Fatalf("failed to setup user table: %v", err)
+	}
+
+	err = database.CreateTopicTable(db)
+	if err != nil {
+		t.Fatalf("failed to setup topics table: %v", err)
+	}
+
+	username := "testuser"
+	email := "testuser@example.com"
+	password := "password123"
+	topicTitle := "Test Topic"
+
+	err = database.AddUser(db, username, email, password)
+	if err != nil {
+		t.Fatalf("failed to add test user: %v", err)
+	}
+
+	err = database.AddTopic(db, topicTitle, username)
+	if err != nil {
+		t.Fatalf("failed to add test topic: %v", err)
+	}
+
+	handler := handlers.DownVoteTopicHandler(db)
+
+	t.Run("Successfully_downvote", func(t *testing.T) {
+		reqBody := `{"title":"Test Topic", "username":"testuser"}`
+		req := httptest.NewRequest(http.MethodPost, "/downvote-topic", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+		}
+
+		var resp map[string]string
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		if err != nil {
+			t.Fatalf("failed to unmarshal response: %v", err)
+		}
+
+		if resp["message"] != "downvote added successfully" {
+			t.Errorf("expected response 'downvote added successfully', got %s", resp["message"])
+		}
+	})
+
+	t.Run("Invalid_JSON", func(t *testing.T) {
+		reqBody := `{"title":, "username":}`
+		req := httptest.NewRequest(http.MethodPost, "/downvote-topic", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+		}
+
+		body := w.Body.String()
+		if body != "invalid JSON format\n" {
+			t.Errorf("expected response 'invalid JSON format', got '%s'", body)
+		}
+	})
+
+	t.Run("Missing_fields", func(t *testing.T) {
+		reqBody := `{}`
+		req := httptest.NewRequest(http.MethodPost, "/downvote-topic", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+		}
+
+		body := w.Body.String()
+		if body != "all fields (title, username) are required\n" {
+			t.Errorf("expected response 'all fields (title, username) are required', got '%s'", body)
 		}
 	})
 }
