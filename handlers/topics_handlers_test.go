@@ -470,3 +470,65 @@ func TestDownVoteTopicHandler(t *testing.T) {
 		}
 	})
 }
+
+func TestGetAllTopicsHandler(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create in-memory database: %v", err)
+	}
+	defer db.Close()
+
+	err = database.CreateUserTable(db)
+	if err != nil {
+		t.Fatalf("failed to setup user table: %v", err)
+	}
+
+	err = database.CreateTopicTable(db)
+	if err != nil {
+		t.Fatalf("failed to setup topics table: %v", err)
+	}
+
+	username := "testuser"
+	email := "testuser@example.com"
+	password := "password123"
+
+	err = database.AddUser(db, username, email, password)
+	if err != nil {
+		t.Fatalf("failed to add test user: %v", err)
+	}
+
+	// Add some test topics
+	err = database.AddTopic(db, "Test Topic 1", username)
+	if err != nil {
+		t.Fatalf("failed to add test topic 1: %v", err)
+	}
+	err = database.AddTopic(db, "Test Topic 2", username)
+	if err != nil {
+		t.Fatalf("failed to add test topic 2: %v", err)
+	}
+
+	handler := handlers.GetAllTopicsHandler(db)
+
+	req := httptest.NewRequest(http.MethodGet, "/topics", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var topics []map[string]interface{}
+	err = json.NewDecoder(w.Body).Decode(&topics)
+	if err != nil {
+		t.Fatalf("failed to decode response body: %v", err)
+	}
+
+	if len(topics) != 2 {
+		t.Errorf("expected 2 topics, got %d", len(topics))
+	}
+
+	if topics[0]["title"] != "Test Topic 1" || topics[1]["title"] != "Test Topic 2" {
+		t.Errorf("unexpected topics found: %v", topics)
+	}
+}
