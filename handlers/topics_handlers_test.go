@@ -497,7 +497,6 @@ func TestGetAllTopicsHandler(t *testing.T) {
 		t.Fatalf("failed to add test user: %v", err)
 	}
 
-	// Add some test topics
 	err = database.AddTopic(db, "Test Topic 1", username)
 	if err != nil {
 		t.Fatalf("failed to add test topic 1: %v", err)
@@ -531,4 +530,77 @@ func TestGetAllTopicsHandler(t *testing.T) {
 	if topics[0]["title"] != "Test Topic 1" || topics[1]["title"] != "Test Topic 2" {
 		t.Errorf("unexpected topics found: %v", topics)
 	}
+}
+
+func TestGetTopicByTitleHandler(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create in-memory database: %v", err)
+	}
+	defer db.Close()
+
+	err = database.CreateUserTable(db)
+	if err != nil {
+		t.Fatalf("failed to setup user table: %v", err)
+	}
+
+	err = database.CreateTopicTable(db)
+	if err != nil {
+		t.Fatalf("failed to setup topics table: %v", err)
+	}
+
+	username := "testuser"
+	email := "testuser@example.com"
+	password := "password123"
+
+	err = database.AddUser(db, username, email, password)
+	if err != nil {
+		t.Fatalf("failed to add test user: %v", err)
+	}
+
+	topicTitle := "Test Topic"
+	err = database.AddTopic(db, topicTitle, username)
+	if err != nil {
+		t.Fatalf("failed to add test topic: %v", err)
+	}
+
+	handler := handlers.GetTopicByTitleHandler(db)
+
+	t.Run("TopicFound", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, "/get-topic?title=Test%20Topic", nil)
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+		}
+
+		var topic map[string]interface{}
+		err := json.NewDecoder(w.Body).Decode(&topic)
+		if err != nil {
+			t.Fatalf("failed to decode response body: %v", err)
+		}
+
+		if topic["title"] != topicTitle {
+			t.Errorf("expected topic title %q, got %q", topicTitle, topic["title"])
+		}
+	})
+
+	t.Run("TopicNotFound", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, "/get-topic?title=Nonexistent%20Topic", nil)
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("expected status %d, got %d", http.StatusNotFound, w.Code)
+		}
+
+		body := w.Body.String()
+		expectedBody := "topic with title 'Nonexistent Topic' not found\n"
+		if body != expectedBody {
+			t.Errorf("expected response body %q, got %q", expectedBody, body)
+		}
+	})
 }
