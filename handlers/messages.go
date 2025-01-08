@@ -136,3 +136,79 @@ func GetMessagesByTopicHandler(db *sql.DB) http.HandlerFunc {
 		}
 	}
 }
+
+func LikeMessageHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var reqBody struct {
+			MessageID int `json:"message_id"`
+		}
+
+		err := json.NewDecoder(r.Body).Decode(&reqBody)
+		if err != nil {
+			http.Error(w, "invalid JSON format", http.StatusBadRequest)
+			return
+		}
+
+		if reqBody.MessageID == 0 {
+			http.Error(w, "message_id is required", http.StatusBadRequest)
+			return
+		}
+
+		err = database.LikeMessage(db, reqBody.MessageID)
+		if err != nil {
+			http.Error(w, "failed to like message", http.StatusInternalServerError)
+			return
+		}
+
+		resp := map[string]string{
+			"message": "like added successfully",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func DislikeMessageHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var reqBody struct {
+			MessageID int `json:"message_id"`
+		}
+
+		err := json.NewDecoder(r.Body).Decode(&reqBody)
+		if err != nil {
+			http.Error(w, "invalid JSON format", http.StatusBadRequest)
+			return
+		}
+
+		if reqBody.MessageID == 0 {
+			http.Error(w, "message_id is required", http.StatusBadRequest)
+			return
+		}
+
+		err = database.DislikeMessage(db, reqBody.MessageID)
+		if err != nil {
+			http.Error(w, "failed to dislike message", http.StatusInternalServerError)
+			return
+		}
+
+		resp := map[string]string{
+			"message": "dislike added successfully",
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}
+}
