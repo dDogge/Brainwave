@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/dDogge/Brainwave/database"
 )
@@ -99,5 +100,39 @@ func SetParentHandler(db *sql.DB) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func GetMessagesByTopicHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "invalid request method", http.StatusMethodNotAllowed)
+			return
+		}
+
+		topicIDStr := r.URL.Query().Get("topic_id")
+		if topicIDStr == "" {
+			http.Error(w, "topic_id is required", http.StatusBadRequest)
+			return
+		}
+
+		topicID, err := strconv.Atoi(topicIDStr)
+		if err != nil {
+			http.Error(w, "invalid topic_id", http.StatusBadRequest)
+			return
+		}
+
+		messages, err := database.GetMessagesByTopic(db, topicID)
+		if err != nil {
+			http.Error(w, "failed to fetch messages", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(messages); err != nil {
+			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+			return
+		}
 	}
 }
