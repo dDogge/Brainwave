@@ -124,12 +124,20 @@ func GetMessagesByTopic(db *sql.DB, topicID int) ([]map[string]interface{}, erro
 
 	var messages []map[string]interface{}
 	for rows.Next() {
-		var id, likes, userID, parentID sql.NullInt64
+		var id, likes, userID sql.NullInt64
+		var parentID sql.NullInt64
 		var message, timestamp string
 
 		if err := rows.Scan(&id, &message, &timestamp, &likes, &userID, &parentID); err != nil {
 			log.Printf("error scanning message row: %v", err)
 			return nil, fmt.Errorf("could not scan message row: %w", err)
+		}
+
+		var parentIDValue interface{}
+		if parentID.Valid {
+			parentIDValue = parentID.Int64
+		} else {
+			parentIDValue = nil
 		}
 
 		msg := map[string]interface{}{
@@ -138,7 +146,7 @@ func GetMessagesByTopic(db *sql.DB, topicID int) ([]map[string]interface{}, erro
 			"timestamp": timestamp,
 			"likes":     likes.Int64,
 			"user_id":   userID.Int64,
-			"parent_id": parentID.Int64,
+			"parent_id": parentIDValue,
 		}
 		messages = append(messages, msg)
 	}
