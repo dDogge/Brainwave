@@ -263,3 +263,177 @@ func TestSetParentHandler(t *testing.T) {
 		}
 	})
 }
+
+func TestGetMessagesByTopicHandler(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create in-memory database: %v", err)
+	}
+	defer db.Close()
+
+	err = database.CreateUserTable(db)
+	if err != nil {
+		t.Fatalf("failed to create user table: %v", err)
+	}
+
+	err = database.CreateTopicTable(db)
+	if err != nil {
+		t.Fatalf("failed to create topics table: %v", err)
+	}
+
+	err = database.CreateMessageTable(db)
+	if err != nil {
+		t.Fatalf("failed to create messages table: %v", err)
+	}
+
+	username := "testuser"
+	err = database.AddUser(db, username, "testuser@test.com", "password123")
+	if err != nil {
+		t.Fatalf("failed to add test user: %v", err)
+	}
+
+	topicTitle := "Test Topic"
+	err = database.AddTopic(db, topicTitle, "testuser")
+	if err != nil {
+		t.Fatalf("failed to add test topic: %v", err)
+	}
+
+	var topicID int
+	err = db.QueryRow("SELECT id FROM topics WHERE title = ?", topicTitle).Scan(&topicID)
+	if err != nil {
+		t.Fatalf("failed to fetch topic ID: %v", err)
+	}
+
+	messages := []string{"Message 1", "Message 2", "Message 3"}
+	for _, msg := range messages {
+		err = database.AddMessage(db, topicTitle, msg, "testuser")
+		if err != nil {
+			t.Fatalf("failed to add message '%s': %v", msg, err)
+		}
+	}
+
+	handler := handlers.GetMessagesByTopicHandler(db)
+
+	t.Run("Valid Request", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/messages?topic_id=%d", topicID), nil)
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+		}
+
+		var response []map[string]interface{}
+		err := json.NewDecoder(w.Body).Decode(&response)
+		if err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		expectedMessages := []map[string]interface{}{
+			{"id": int64(1), "message": "Message 1", "likes": int64(0), "user_id": int64(1), "parent_id": nil},
+			{"id": int64(2), "message": "Message 2", "likes": int64(0), "user_id": int64(1), "parent_id": nil},
+			{"id": int64(3), "message": "Message 3", "likes": int64(0), "user_id": int64(1), "parent_id": nil},
+		}
+
+		if len(response) != len(expectedMessages) {
+			t.Fatalf("expected %d messages, got %d", len(expectedMessages), len(response))
+		}
+
+		for i, expected := range expectedMessages {
+			actual := response[i]
+
+			for key, expectedValue := range expected {
+				actualValue, exists := actual[key]
+				if !exists {
+					t.Errorf("expected key '%s' to exist in response but it did not", key)
+				}
+
+				switch ev := expectedValue.(type) {
+				case int64:
+					av, ok := actualValue.(float64)
+					if !ok || int64(av) != ev {
+						t.Errorf("for key '%s', expected %v, got %v", key, ev, actualValue)
+					}
+				case nil:
+					if actualValue != nil {
+						t.Errorf("expected key '%s' to be nil, got %v", key, actualValue)
+					}
+				default:
+					if expectedValue != actualValue {
+						t.Errorf("for key '%s', expected %v, got %v", key, expectedValue, actualValue)
+					}
+				}
+			}
+		}
+	})
+
+	t.Run("Missing Topic ID", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/messages", nil)
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+		}
+
+		expected := "topic_id is required\n"
+		if w.Body.String() != expected {
+			t.Errorf("expected response '%s', got '%s'", expected, w.Body.String())
+		}
+	})
+
+	t.Run("Invalid Topic ID", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/messages?topic_id=invalid", nil)
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+		}
+
+		expected := "invalid topic_id\n"
+		if w.Body.String() != expected {
+			t.Errorf("expected response '%s', got '%s'", expected, w.Body.String())
+		}
+	})
+
+	t.Run("Non-Existent Topic", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/messages?topic_id=9999", nil)
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+		}
+
+		var response []string
+		err := json.NewDecoder(w.Body).Decode(&response)
+		if err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if len(response) != 0 {
+			t.Errorf("expected empty response, got %v", response)
+		}
+	})
+
+	t.Run("Invalid Method", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/messages?topic_id=1", nil)
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("expected status %d, got %d", http.StatusMethodNotAllowed, w.Code)
+		}
+
+		expected := "invalid request method\n"
+		if w.Body.String() != expected {
+			t.Errorf("expected response '%s', got '%s'", expected, w.Body.String())
+		}
+	})
+}
