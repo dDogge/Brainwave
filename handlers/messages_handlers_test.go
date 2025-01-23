@@ -437,3 +437,91 @@ func TestGetMessagesByTopicHandler(t *testing.T) {
 		}
 	})
 }
+
+func TestLikeMessageHandler(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create in-memory database: %v", err)
+	}
+	defer db.Close()
+
+	err = database.CreateUserTable(db)
+	if err != nil {
+		t.Fatalf("failed to create user table: %v", err)
+	}
+
+	err = database.CreateTopicTable(db)
+	if err != nil {
+		t.Fatalf("failed to create topics table: %v", err)
+	}
+
+	err = database.CreateMessageTable(db)
+	if err != nil {
+		t.Fatalf("failed to create messages table: %v", err)
+	}
+
+	username := "testuser"
+	err = database.AddUser(db, username, "testuser@test.com", "password123")
+	if err != nil {
+		t.Fatalf("failed to add test user: %v", err)
+	}
+
+	topicTitle := "Test Topic"
+	err = database.AddTopic(db, topicTitle, username)
+	if err != nil {
+		t.Fatalf("failed to add test topic: %v", err)
+	}
+
+	messageContent := "Test Message"
+	err = database.AddMessage(db, topicTitle, messageContent, username)
+	if err != nil {
+		t.Fatalf("failed to add test message: %v", err)
+	}
+
+	var messageID int
+	err = db.QueryRow("SELECT id FROM messages WHERE message = ?", messageContent).Scan(&messageID)
+	if err != nil {
+		t.Fatalf("failed to fetch message ID: %v", err)
+	}
+
+	handler := handlers.LikeMessageHandler(db)
+
+	t.Run("Valid Like", func(t *testing.T) {
+		reqBody := fmt.Sprintf(`{"message_id": %d}`, messageID)
+		req := httptest.NewRequest(http.MethodPost, "/like", strings.NewReader(reqBody))
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+		}
+
+		var resp map[string]string
+		err := json.NewDecoder(w.Body).Decode(&resp)
+		if err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		expectedMessage := "like added successfully"
+		if resp["message"] != expectedMessage {
+			t.Errorf("expected message '%s', got '%s'", expectedMessage, resp["message"])
+		}
+	})
+
+	t.Run("Invalid Method", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/like", nil)
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("expected status %d, got %d", http.StatusMethodNotAllowed, w.Code)
+		}
+
+		expectedMessage := "invalid request method\n"
+		if w.Body.String() != expectedMessage {
+			t.Errorf("expected response '%s', got '%s'", expectedMessage, w.Body.String())
+		}
+	})
+}
