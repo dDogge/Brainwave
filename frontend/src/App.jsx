@@ -1,12 +1,14 @@
 import './App.css'
 
 function App() {
-
   return (
-    <>
-      <h1>Brainwave</h1>
-    </>
-  )
+    <div className="container">
+      <div className="bar">
+      <h1 className="logotext">Brainwave</h1>
+      </div>
+      <p>TODO</p>
+    </div>
+  );
 }
 
 export default App
