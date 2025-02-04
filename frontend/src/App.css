@@ -25,7 +25,7 @@ body {
   align-self: center;
   width: 99%;
   background-color: #E3F2FD;
-  height: 160px;
+  height: 70px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); 
   border-radius: 10px;
   padding: 0px;
@@ -37,8 +37,17 @@ body {
   top: 5px; /* 10px från toppen */
   left: 10px; /* 10px från vänster */
   color: #C41E3D;
-  font-size: 50px;
+  font-size: 55px;
   font-weight: bold;
   line-height: 1; /* Förhindrar extra spacing som skjuter ner texten */
   margin: 0; /* Tar bort eventuell extra marginal */
+  margin-right: 10px;
+}
+
+.logo {
+  width: 50px; /* Justera storlek */
+  height: auto; /* Bevara proportioner */
+  position: absolute;
+  top: 10px;
+  left: 280px
 }
