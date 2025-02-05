@@ -7,8 +7,14 @@ function App() {
       <div className="bar">
         <h1 className="logotext">Brainwave</h1>
         <img className="logo" src={logo} alt="Logo" />
+        <button className="loginButton">login</button>
       </div>
-      <p>TODO</p>
+      <div className="subcontainer">
+        <form className="searchBar"> 
+         <input type="search" id="query" name="q" placeholder="Search..."></input>
+         <button className="searchButton">Search</button>
+        </form>
+      </div>
     </div>
   );
 }

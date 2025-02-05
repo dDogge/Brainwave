@@ -26,7 +26,7 @@ body {
   width: 99%;
   background-color: #E3F2FD;
   height: 70px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); 
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); 
   border-radius: 10px;
   padding: 0px;
   display: flex;
@@ -50,4 +50,77 @@ body {
   position: absolute;
   top: 10px;
   left: 280px
+}
+
+.loginButton {
+  width: 100px;
+  height: 50px;
+  position: absolute;
+  top: 10px;
+  left: 955px;
+  color: #E3F2FD;
+  background-color: #C41E3D;
+  font-size: 20px;
+  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); 
+}
+
+.subcontainer {
+  position: relative;
+  align-self: center;
+  width: 99%;
+  background-color: #333138;
+  height: 93vh;
+  border: 10px;
+  padding: 0px;
+  display: flex;
+  border-radius: 10px;
+  top: 15px 
+}
+
+input {
+  all: unset;
+  font: 16px system-ui;
+  color: #333138;
+  height: 100%;
+  width: 100%;
+  padding: 6px 10px;
+}
+
+::placeholder {
+  color: #333138;
+  opacity: 0.7; 
+}
+
+.searchBar {
+  background-color: #E3F2FD;
+  width: 97%;
+  height: 50px;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  position: relative;
+  top: 15px;
+  left: 15px
+}
+
+.searchButton {
+  width: 100px;
+  height: 48px;
+  color: #E3F2FD;
+  background-color: #C41E3D;
+  font-size: 17px;
+  font-weight: bold;
+  right: 1px;
+  position: relative;
+  border-radius: 5px;
+}
+
+.sortButton {
+
+}
+
+.topcis {
+
 }
