@@ -14,6 +14,12 @@ function App() {
          <input type="search" id="query" name="q" placeholder="Search..."></input>
          <button className="searchButton">Search</button>
         </form>
+        <button className="recentButton">Recent</button>
+        <button className="likesButton">Likes</button>
+        <button className="oldestButton">Oldest</button>
+        <div className="topicsContainer">
+          
+        </div>
       </div>
     </div>
   );

@@ -100,7 +100,7 @@ input {
   display: flex;
   flex-direction: row;
   align-items: center;
-  position: relative;
+  position: absolute;
   top: 15px;
   left: 15px
 }
@@ -117,10 +117,55 @@ input {
   border-radius: 5px;
 }
 
-.sortButton {
-
+/*Buttons for sorting topic*/
+.recentButton {
+  width: 100px;
+  height: 48px;
+  color: #E3F2FD;
+  background-color: #C41E3D;
+  font-size: 17px;
+  font-weight: bold;
+  position: relative;
+  top: 80px;
+  left: 15px;
+  border-radius: 5px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
 }
 
-.topcis {
+.likesButton {
+  width: 100px;
+  height: 48px;
+  color: #E3F2FD;
+  background-color: #C41E3D;
+  font-size: 17px;
+  font-weight: bold;
+  position: relative;
+  top: 80px;
+  left: 20px;
+  border-radius: 5px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
 
+.oldestButton {
+  width: 100px;
+  height: 48px;
+  color: #E3F2FD;
+  background-color: #C41E3D;
+  font-size: 17px;
+  font-weight: bold;
+  position: relative;
+  top: 80px;
+  left: 25px;
+  border-radius: 5px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.topicsContainer {
+   background-color: #E3F2FD;
+   width: 97%;
+   height: 81vh;
+   position: absolute;
+   top: 145px;
+   left: 15px;
+   border-radius: 5px;
 }
