@@ -9,7 +9,7 @@ function HomePage() {
         <h1 className="logotext">Brainwave</h1>
         <img className="logo" src={logo} alt="Logo" />
         <Link to="/login">
-          <button className="loginButton">login</button>
+          <button className="loginButton">Login</button>
         </Link>
       </div>
       <div className="subcontainer">
@@ -34,8 +34,17 @@ function LoginPage() {
       <div className="bar">
         <h1 className="logotext">Brainwave</h1>
         <img className="logo" src={logo} alt="Logo" />
+        <Link to="/">
+          <button className="backButton">Back</button>
+        </Link>
       </div>
       <div className="subcontainer">
+        <div className="loginContainer">
+          <input className="usernameField" placeholder="Username..."></input>
+          <input className="passwordField" placeholder="Password..."></input>
+          <button className="loginPageLoginButton">Login</button>
+          <button className="forgotPasswordButton">Forgot Password?</button>
+        </div>
       </div>
     </div>
   );
