@@ -246,3 +246,35 @@ input {
   font-weight: bold;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); 
 }
+
+.codeField {
+  background-color: #E3F2FD;
+  border: 3px solid #C41E3D;
+  width: 90%;
+  height: 50px;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  position: absolute;
+  top: 160px;
+  left: 15px
+}
+
+.codeInstructions {
+  color: #333138;
+  padding: 5px;
+}
+
+.changePasswordButton {
+  width: 500px;
+  height: 60px;
+  position: absolute;
+  top: 245px;
+  left: 18px;
+  color: #E3F2FD;
+  background-color: #C41E3D;
+  font-size: 25px;
+  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); 
+}

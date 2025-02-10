@@ -42,8 +42,12 @@ function LoginPage() {
         <div className="loginContainer">
           <input className="usernameField" placeholder="Username..."></input>
           <input className="passwordField" placeholder="Password..."></input>
-          <button className="loginPageLoginButton">Login</button>
-          <button className="forgotPasswordButton">Forgot Password?</button>
+          <Link to="/userpage">
+            <button className="loginPageLoginButton">Login</button>
+          </Link>
+          <Link to="/forgotpassword">
+            <button className="forgotPasswordButton">Forgot Password?</button>
+          </Link>
         </div>
       </div>
     </div>
@@ -58,6 +62,14 @@ function ForgotPasswordPage() {
         <img className="logo" src={logo} alt="Logo" />
       </div>
       <div className="subcontainer">
+        <div className="loginContainer">
+          <p className="codeInstructions"> A code have been sent to your email, please type it and your new password of choice! You will be redirected to the mainpage after you are done.</p>
+          <input className="passwordField" placeholder="Type New Password..."></input>
+          <input className="codeField" placeholder="Type Your Code..."></input>
+          <Link to="/">
+            <button className="changePasswordButton">Proceed with password change</button>
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -131,6 +143,8 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgotpassword" element={<ForgotPasswordPage />} />
+        <Route path="/userpage" element={<UserFrontPage />} />
       </Routes>
     </Router>
   );
