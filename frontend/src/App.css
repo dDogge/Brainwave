@@ -278,3 +278,29 @@ input {
   font-weight: bold;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); 
 }
+
+.logoutButton {
+  width: 100px;
+  height: 50px;
+  position: absolute;
+  top: 10px;
+  left: 955px;
+  color: #E3F2FD;
+  background-color: #C41E3D;
+  font-size: 18px;
+  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); 
+}
+
+.accountButton {
+  width: 110px;
+  height: 50px;
+  position: absolute;
+  top: 10px;
+  left: 830px;
+  color: #E3F2FD;
+  background-color: #C41E3D;
+  font-size: 18px;
+  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}

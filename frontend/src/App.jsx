@@ -8,7 +8,7 @@ function HomePage() {
       <div className="bar">
         <h1 className="logotext">Brainwave</h1>
         <img className="logo" src={logo} alt="Logo" />
-        <Link to="/login">
+        <Link to="/login/">
           <button className="loginButton">Login</button>
         </Link>
       </div>
@@ -42,10 +42,10 @@ function LoginPage() {
         <div className="loginContainer">
           <input className="usernameField" placeholder="Username..."></input>
           <input className="passwordField" placeholder="Password..."></input>
-          <Link to="/userpage">
+          <Link to="/user/">
             <button className="loginPageLoginButton">Login</button>
           </Link>
-          <Link to="/forgotpassword">
+          <Link to="/login/forgotpassword/">
             <button className="forgotPasswordButton">Forgot Password?</button>
           </Link>
         </div>
@@ -94,6 +94,12 @@ function UserFrontPage() {
       <div className="bar">
         <h1 className="logotext">Brainwave</h1>
         <img className="logo" src={logo} alt="Logo" />
+        <Link to="/">
+          <button className="logoutButton">Logout</button>
+        </Link>
+        <Link to="/user/account/">
+          <button className="accountButton">Account</button>
+        </Link>
       </div>
       <div className="subcontainer">
         <form className="searchBar"> 
@@ -142,9 +148,10 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/forgotpassword" element={<ForgotPasswordPage />} />
-        <Route path="/userpage" element={<UserFrontPage />} />
+        <Route path="/login/" element={<LoginPage />} />
+        <Route path="/login/forgotpassword/" element={<ForgotPasswordPage />} />
+        <Route path="/user/" element={<UserFrontPage />} />
+        <Route path="/user/account/" element={<UserSettingPage />} />
       </Routes>
     </Router>
   );
