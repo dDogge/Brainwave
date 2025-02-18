@@ -1,5 +1,7 @@
 import './App.css'
 import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import {useNavigate } from 'react-router-dom';
 import logo from './images/logo.png';
 
 function HomePage() {
@@ -29,6 +31,34 @@ function HomePage() {
 }
 
 function LoginPage() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false); 
+  
+  const fakeUser = {
+    username: 'testuser',
+    password: 'password123',
+  };
+
+  const navigate = useNavigate();
+
+  const handleLogin = (e) => {
+    e.preventDefault(); 
+ 
+    if (username === fakeUser.username && password === fakeUser.password) {
+      navigate('/user/');
+    } else {
+      setErrorMessage('Invalid username or password. Please try again.');
+      setIsModalOpen(true); 
+    }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false); 
+    setErrorMessage('');
+  };
+
   return (
     <div className="container">
       <div className="bar">
@@ -40,16 +70,39 @@ function LoginPage() {
       </div>
       <div className="subcontainer">
         <div className="loginContainer">
-          <input className="usernameField" placeholder="Username..."></input>
-          <input className="passwordField" placeholder="Password..."></input>
-          <Link to="/user/">
-            <button className="loginPageLoginButton">Login</button>
-          </Link>
+          <input 
+            className="usernameField" 
+            placeholder="Username..." 
+            value={username} 
+            onChange={(e) => setUsername(e.target.value)} 
+          />
+          <input 
+            className="passwordField" 
+            type="password" 
+            placeholder="Password..." 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+          />
+          <button 
+            className="loginPageLoginButton"
+            onClick={handleLogin} 
+          >
+            Login
+          </button>
           <Link to="/login/forgotpassword/">
             <button className="forgotPasswordButton">Forgot Password?</button>
           </Link>
         </div>
       </div>
+
+      {isModalOpen && (
+        <div className="modal">
+          <div className="modalContent">
+            <p>{errorMessage}</p>
+            <button className="closeModalButton" onClick={closeModal}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
