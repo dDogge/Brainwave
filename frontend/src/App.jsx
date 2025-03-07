@@ -1,8 +1,30 @@
-import './App.css'
-import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import './App.css';
+import { BrowserRouter as Router, Route, Routes, Link, useParams, useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
-import {useNavigate } from 'react-router-dom';
 import logo from './images/logo.png';
+
+const fakeTopics = [
+  { id: 1, title: "Fake Topic One", likes: 10 },
+  { id: 2, title: "Fake Topic Two", likes: 5 },
+  { id: 3, title: "Fake Topic Three", likes: 20 },
+];
+
+function TopicsList({ topics, userPage }) {
+  const sortedTopics = topics.slice().sort((a, b) => b.likes - a.likes);
+
+  return (
+    <div className="topicsList">
+      {sortedTopics.map(topic => (
+        <Link key={topic.id} to={userPage ? `/user/topic/${topic.id}` : `/topic/${topic.id}`}>
+          <div className="topicItem">
+            <h3>{topic.title}</h3>
+            <p>{topic.likes} likes</p>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 function HomePage() {
   return (
@@ -16,14 +38,15 @@ function HomePage() {
       </div>
       <div className="subcontainer">
         <form className="searchBar"> 
-         <input type="search" id="query" name="q" placeholder="Search..."></input>
-         <button className="searchButton">Search</button>
+          <input type="search" id="query" name="q" placeholder="Search..." />
+          <button className="searchButton">Search</button>
         </form>
         <button className="recentButton">Recent</button>
         <button className="likesButton">Likes</button>
         <button className="oldestButton">Oldest</button>
         <div className="topicsContainer">
-          
+          {/* Visa fake topics (icke-inloggad vy) */}
+          <TopicsList topics={fakeTopics} userPage={false} />
         </div>
       </div>
     </div>
@@ -176,14 +199,14 @@ function UserFrontPage() {
       </div>
       <div className="subcontainer">
         <form className="searchBar"> 
-         <input type="search" id="query" name="q" placeholder="Search..."></input>
-         <button className="searchButton">Search</button>
+          <input type="search" id="query" name="q" placeholder="Search..." />
+          <button className="searchButton">Search</button>
         </form>
         <button className="recentButton">Recent</button>
         <button className="likesButton">Likes</button>
         <button className="oldestButton">Oldest</button>
         <div className="topicsContainer">
-          
+          <TopicsList topics={fakeTopics} userPage={true} />
         </div>
       </div>
     </div>
@@ -191,6 +214,7 @@ function UserFrontPage() {
 }
 
 function TopicPage() {
+  const { id } = useParams();
   return (
     <div className="container">
       <div className="bar">
@@ -198,12 +222,15 @@ function TopicPage() {
         <img className="logo" src={logo} alt="Logo" />
       </div>
       <div className="subcontainer">
+        <h2>Topic {id}</h2>
+        <p>This is the topic page for non-logged in users.</p>
       </div>
     </div>
   );
 }
 
 function TopicPageUser() {
+  const { id } = useParams();
   return (
     <div className="container">
       <div className="bar">
@@ -211,6 +238,8 @@ function TopicPageUser() {
         <img className="logo" src={logo} alt="Logo" />
       </div>
       <div className="subcontainer">
+        <h2>Topic {id}</h2>
+        <p>This is the topic page for logged in users.</p>
       </div>
     </div>
   );
@@ -223,9 +252,11 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login/" element={<LoginPage />} />
         <Route path="/login/askforemail/" element={<AskForEmailPage />} />
+        <Route path="/login/askforemail/forgotpassword" element={<ForgotPasswordPage />} />
         <Route path="/user/" element={<UserFrontPage />} />
         <Route path="/user/account/" element={<UserSettingPage />} />
-        <Route path="/login/askforemail/forgotpassword" element={<ForgotPasswordPage />} />
+        <Route path="/topic/:id" element={<TopicPage />} />
+        <Route path="/user/topic/:id" element={<TopicPageUser />} />
       </Routes>
     </Router>
   );
