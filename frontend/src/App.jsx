@@ -4,13 +4,24 @@ import React, { useState } from 'react';
 import logo from './images/logo.png';
 
 const fakeTopics = [
-  { id: 1, title: "Fake Topic One", likes: 10 },
-  { id: 2, title: "Fake Topic Two", likes: 5 },
-  { id: 3, title: "Fake Topic Three", likes: 20 },
+  { id: 1, title: "Fake Topic One", likes: 10, timestamp: '2023-04-01T10:00:00Z' },
+  { id: 2, title: "Fake Topic Two", likes: 5, timestamp: '2023-03-15T12:00:00Z' },
+  { id: 3, title: "Fake Topic Three", likes: 20, timestamp: '2023-05-10T09:00:00Z' },
 ];
 
-function TopicsList({ topics, userPage }) {
-  const sortedTopics = topics.slice().sort((a, b) => b.likes - a.likes);
+function TopicsList({ topics, userPage, sortMode }) {
+  // Sortera topics baserat på valt sorteringsläge
+  const sortedTopics = topics.slice().sort((a, b) => {
+    if (sortMode === 'likes') {
+      return b.likes - a.likes;
+    } else if (sortMode === 'recent') {
+      return new Date(b.timestamp) - new Date(a.timestamp);
+    } else if (sortMode === 'oldest') {
+      return new Date(a.timestamp) - new Date(b.timestamp);
+    } else {
+      return 0;
+    }
+  });
 
   return (
     <div className="topicsList">
@@ -19,6 +30,7 @@ function TopicsList({ topics, userPage }) {
           <div className="topicItem">
             <h3>{topic.title}</h3>
             <p>{topic.likes} likes</p>
+            <p>{new Date(topic.timestamp).toLocaleString()}</p>
           </div>
         </Link>
       ))}
@@ -27,6 +39,8 @@ function TopicsList({ topics, userPage }) {
 }
 
 function HomePage() {
+  const [sortMode, setSortMode] = useState('recent');
+
   return (
     <div className="container">
       <div className="bar">
@@ -41,12 +55,11 @@ function HomePage() {
           <input type="search" id="query" name="q" placeholder="Search..." />
           <button className="searchButton">Search</button>
         </form>
-        <button className="recentButton">Recent</button>
-        <button className="likesButton">Likes</button>
-        <button className="oldestButton">Oldest</button>
+        <button className="recentButton" onClick={() => setSortMode('recent')}>Recent</button>
+        <button className="likesButton" onClick={() => setSortMode('likes')}>Likes</button>
+        <button className="oldestButton" onClick={() => setSortMode('oldest')}>Oldest</button>
         <div className="topicsContainer">
-          {/* Visa fake topics (icke-inloggad vy) */}
-          <TopicsList topics={fakeTopics} userPage={false} />
+          <TopicsList topics={fakeTopics} userPage={false} sortMode={sortMode} />
         </div>
       </div>
     </div>
@@ -185,6 +198,8 @@ function UserSettingPage() {
 }
 
 function UserFrontPage() {
+  const [sortMode, setSortMode] = useState('recent');
+
   return (
     <div className="container">
       <div className="bar">
@@ -202,11 +217,11 @@ function UserFrontPage() {
           <input type="search" id="query" name="q" placeholder="Search..." />
           <button className="searchButton">Search</button>
         </form>
-        <button className="recentButton">Recent</button>
-        <button className="likesButton">Likes</button>
-        <button className="oldestButton">Oldest</button>
+        <button className="recentButton" onClick={() => setSortMode('recent')}>Recent</button>
+        <button className="likesButton" onClick={() => setSortMode('likes')}>Likes</button>
+        <button className="oldestButton" onClick={() => setSortMode('oldest')}>Oldest</button>
         <div className="topicsContainer">
-          <TopicsList topics={fakeTopics} userPage={true} />
+          <TopicsList topics={fakeTopics} userPage={true} sortMode={sortMode} />
         </div>
       </div>
     </div>
