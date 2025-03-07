@@ -89,7 +89,7 @@ function LoginPage() {
           >
             Login
           </button>
-          <Link to="/login/forgotpassword/">
+          <Link to="/login/askforemail/">
             <button className="forgotPasswordButton">Forgot Password?</button>
           </Link>
         </div>
@@ -103,6 +103,26 @@ function LoginPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function AskForEmailPage() {
+  return (
+    <div className="container">
+      <div className="bar">
+        <h1 className="logotext">Brainwave</h1>
+        <img className="logo" src={logo} alt="Logo" />
+      </div>
+      <div className="subcontainer">
+        <div className="loginContainer">
+          <p className="codeInstructions"> Type your email, a code will be sent to it so you can change your password</p>
+          <input className="passwordField" placeholder="Type Your Email..."></input>
+          <Link to="/login/askforemail/forgotpassword/">
+            <button className="enterEmailButton">Change Password</button>
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
@@ -202,9 +222,10 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login/" element={<LoginPage />} />
-        <Route path="/login/forgotpassword/" element={<ForgotPasswordPage />} />
+        <Route path="/login/askforemail/" element={<AskForEmailPage />} />
         <Route path="/user/" element={<UserFrontPage />} />
         <Route path="/user/account/" element={<UserSettingPage />} />
+        <Route path="/login/askforemail/forgotpassword" element={<ForgotPasswordPage />} />
       </Routes>
     </Router>
   );
